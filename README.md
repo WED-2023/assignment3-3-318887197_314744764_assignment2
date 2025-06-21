@@ -3,7 +3,7 @@
 
 ## Project setup
 ```
-npm install
+npm install bootstrap bootstrap-vue-3 @vuelidate/core @vuelidate/validators --legacy-peer-deps
 ```
 
 ### Compiles and hot-reloads for development

@@ -1,17 +1,22 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link :to="{ name: 'main' }">Vue Recipes</router-link> |
-      <router-link :to="{ name: 'search' }">Search</router-link> |
-      <span v-if="!store.username">
-        Guest:
-        <router-link :to="{ name: 'register' }">Register</router-link> |
-        <router-link :to="{ name: 'login' }">Login</router-link> |
-      </span>
-      <span v-else>
-        {{ store.username }}:
-        <button @click="logout" class="btn btn-link p-0">Logout</button> |
-      </span>
+    <div id="nav" class="d-flex justify-content-between align-items-center">
+      <div>
+        <router-link :to="{ name: 'main' }">Recipes</router-link>
+        <span v-if="!store.username" class="ms-3">
+          Hello Guest
+          <router-link :to="{ name: 'register' }" class="ms-2">Register</router-link>
+          <router-link :to="{ name: 'login' }" class="ms-2">Login</router-link>
+        </span>
+        <span v-else class="ms-3">
+          {{ store.username }}:
+          <button @click="logout" class="btn btn-link p-0 ms-2">Logout</button>
+        </span>
+      </div>
+      <div>
+        <router-link :to="{ name: 'search' }" class="me-3">Search</router-link>
+        <router-link :to="{ name: 'about' }">About</router-link>
+      </div>
     </div>
     <router-view />
   </div>
@@ -52,6 +57,8 @@ export default {
 
 #nav {
   padding: 30px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e3e3e3;
 }
 
 #nav a {

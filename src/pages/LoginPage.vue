@@ -1,72 +1,95 @@
+
 <template>
-  <div class="login-page">
-    <h1>Login</h1>
-    <form @submit.prevent="login">
-      <div class="form-group">
-        <label>Username:</label>
-        <input v-model="state.username" type="text" class="form-control" />
-        <div v-if="v$.username.$error" class="text-danger">
+  <div class="container mt-4" style="max-width: 400px;">
+    <h2 class="mb-4">Login</h2>
+    <b-form @submit.prevent="login">
+      <!-- Username -->
+      <b-form-group label="Username" label-for="username">
+        <b-form-input
+          id="username"
+          v-model="state.username"
+          :state="getValidationState(v$.username)"
+        />
+        <b-form-invalid-feedback v-if="v$.username.$error">
           Username is required.
-        </div>
+        </b-form-invalid-feedback>
+      </b-form-group>
+
+      <!-- Password -->
+      <b-form-group label="Password" label-for="password">
+        <b-form-input
+          id="password"
+          type="password"
+          v-model="state.password"
+          :state="getValidationState(v$.password)"
+        />
+        <b-form-invalid-feedback v-if="v$.password.$error">
+          Password is required.
+        </b-form-invalid-feedback>
+      </b-form-group>
+
+      <b-button type="submit" variant="primary" class="w-100">Login</b-button>
+
+      <b-alert
+        variant="danger"
+        class="mt-3"
+        dismissible
+        v-if="state.submitError"
+        show
+      >
+        Login failed: {{ state.submitError }}
+      </b-alert>
+
+      <div class="mt-2">
+        Don’t have an account?
+        <router-link to="/register">Register here</router-link>
       </div>
-      <div class="form-group">
-        <label>Password:</label>
-        <input v-model="state.password" type="password" class="form-control" />
-        <div v-if="v$.password.$error" class="text-danger">
-          Password is required (at least 6 characters).
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary mt-3">Login</button>
-    </form>
+    </b-form>
   </div>
 </template>
 
 <script>
 import { reactive } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
-import { required, minLength } from '@vuelidate/validators';
+import { required } from '@vuelidate/validators';
 
 export default {
-  name: "LoginPage",
-  setup(_, { expose }) {
+  name: 'LoginPage',
+  setup() {
     const state = reactive({
       username: '',
       password: '',
+      submitError: null,
     });
 
     const rules = {
       username: { required },
-      password: { required, minLength: minLength(6) },
+      password: { required },
     };
 
     const v$ = useVuelidate(rules, state);
 
+    const getValidationState = (field) => {
+      return field.$dirty ? !field.$invalid : null;
+    };
+
     const login = async () => {
-      if (await v$.value.$validate()) {
-        // קריאה לשרת
-        try {
-          await window.axios.post('/login', {
-            username: state.username,
-            password: state.password
-          });
-          window.store.login(state.username);
-          window.router.push('/main');
-        } catch (err) {
-          window.toast("Login failed", err.response.data.message, "danger");
-        }
+      const valid = await v$.value.$validate();
+      if (!valid) return;
+
+      try {
+        await window.axios.post('/login', {
+          username: state.username,
+          password: state.password,
+        });
+        window.store.login(state.username);
+        window.router.push('/main');
+      } catch (err) {
+        state.submitError = err.response?.data?.message || 'Unexpected error.';
       }
     };
 
-    expose({ login });
-
-    return { state, v$, login };
-  }
+    return { state, v$, login, getValidationState };
+  },
 };
 </script>
-
-<style scoped>
-.login-page {
-  max-width: 400px;
-  margin: auto;
-}
-</style>
