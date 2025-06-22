@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import { reactive } from 'vue';
+import { reactive, getCurrentInstance } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 
@@ -73,12 +73,16 @@ export default {
       return field.$dirty ? !field.$invalid : null;
     };
 
+     // Access server_domain from root store
+    const { proxy } = getCurrentInstance();
+    const server_domain = proxy.$root.store.server_domain;
+
     const login = async () => {
       const valid = await v$.value.$validate();
       if (!valid) return;
 
       try {
-        await window.axios.post('/login', {
+        await window.axios.post(server_domain + '/Login', {
           username: state.username,
           password: state.password,
         });
