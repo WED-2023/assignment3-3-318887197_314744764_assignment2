@@ -20,13 +20,16 @@
           id="username"
           v-model="state.username"
           @blur="v$.username.$touch()"
-          :state="getValidationState(v$.username)"
+          @input="usernameExistsError = ''"
+          :state="getValidationState(v$.username, !!usernameExistsError)"
         />
-        <b-form-invalid-feedback v-if="v$.username.$error">
-          <div v-if="!v$.username.required">Username is required.</div>
-          <div v-if="v$.username.required && !v$.username.minLength">Username is too short (min 3).</div>
-          <div v-if="v$.username.required && !v$.username.maxLength">Username is too long (max 8).</div>
-          <div v-if="v$.username.required && !v$.username.alpha">Username must contain only letters.</div>
+        <b-form-invalid-feedback v-if="v$.username.$error || usernameExistsError">
+          <div v-if="v$.username.required.$invalid">Username is required.</div>
+          <div v-else-if="v$.username.minLength.$invalid">Username is too short (min 3).</div>
+          <div v-else-if="v$.username.maxLength.$invalid">Username is too long (max 8).</div>
+          <div v-else-if="v$.username.alpha.$invalid">Username must contain only letters.</div>
+          <div v-else-if="usernameExistsError">{{ usernameExistsError }}</div>
+          <div v-else>Unknown error</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
@@ -39,8 +42,9 @@
           :state="getValidationState(v$.firstName)"
         />
         <b-form-invalid-feedback v-if="v$.firstName.$error">
-          <div v-if="!v$.firstName.required">First name is required.</div>
-          <div v-if="v$.firstName.required && !v$.firstName.alpha">First name must contain only letters.</div>
+          <div v-if="v$.firstName.required.$invalid">First name is required.</div>
+          <div v-else-if="v$.firstName.alpha.$invalid">First name must contain only letters.</div>
+          <div v-else>Unknown error</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
@@ -53,8 +57,9 @@
           :state="getValidationState(v$.lastName)"
         />
         <b-form-invalid-feedback v-if="v$.lastName.$error">
-          <div v-if="!v$.lastName.required">Last name is required.</div>
-          <div v-if="v$.lastName.required && !v$.lastName.alpha">Last name must contain only letters.</div>
+          <div v-if="v$.lastName.required.$invalid">Last name is required.</div>
+          <div v-else-if="v$.lastName.alpha.$invalid">Last name must contain only letters.</div>
+          <div v-else>Unknown error</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
@@ -68,69 +73,70 @@
           :state="getValidationState(v$.country)"
         />
         <b-form-invalid-feedback v-if="v$.country.$error">
-          <div v-if="state.country === 'Select a country' || !v$.country.required">Country is required.</div>
+          <div v-if="v$.country.required.$invalid">Country is required.</div>
+          <div v-else>Unknown error</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
       <!-- Password -->
-      <b-form-group label="Password" label-for="password">
-        <div class="input-group">
-          <b-form-input
-            id="password"
-            :type="showPassword ? 'text' : 'password'"
-            v-model="state.password"
-            @blur="v$.password.$touch()"
-            :state="getValidationState(v$.password)"
-          />
-          <span class="input-group-text" style="cursor:pointer" @click="showPassword = !showPassword">
-            <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </span>
-        </div>
-        <b-form-invalid-feedback v-if="v$.password.$error">
-          <div v-if="!v$.password.required">Password is required.</div>
-          <div v-if="v$.password.required && !v$.password.minLength">Password is too short (min 5).</div>
-          <div v-if="v$.password.required && !v$.password.maxLength">Password is too long (max 10).</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
+        <b-form-group label="Password" label-for="password">
+          <div class="input-group">
+            <b-form-input
+              id="password"
+              :type="showPassword ? 'text' : 'password'"
+              v-model="state.password"
+              @blur="v$.password.$touch()"
+              :state="getValidationState(v$.password)"
+            />
+            <span class="input-group-text" style="cursor:pointer" @click="showPassword = !showPassword">
+              <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+            </span>
+            <b-form-invalid-feedback v-if="v$.password.$error" class="d-block">
+              <div v-if="v$.password.required.$invalid">Password is required.</div>
+              <div v-else-if="v$.password.minLength.$invalid">Password is too short (min 5).</div>
+              <div v-else-if="v$.password.maxLength.$invalid">Password is too long (max 10).</div>
+              <div v-else-if="v$.password.hasNumber.$invalid">Password must contain at least one number.</div>
+              <div v-else-if="v$.password.hasSpecialChar.$invalid">Password must contain at least one special character.</div>
+              <div v-else>Unknown error</div>
+            </b-form-invalid-feedback>
+          </div>
+        </b-form-group>
 
       <!-- Confirm Password -->
       <b-form-group label="Confirm Password" label-for="confirmedPassword">
         <div class="input-group">
-          <input
+          <b-form-input
             id="confirmedPassword"
             :type="showConfirmPassword ? 'text' : 'password'"
             class="form-control"
             v-model="state.confirmedPassword"
             @blur="v$.confirmedPassword.$touch()"
-            :class="{
-              'is-invalid': v$.confirmedPassword.$error,
-              'is-valid': !v$.confirmedPassword.$invalid && v$.confirmedPassword.$dirty
-            }"
+            :state="getValidationState(v$.confirmedPassword)"
           />
           <span class="input-group-text" style="cursor:pointer" @click="showConfirmPassword = !showConfirmPassword">
             <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
           </span>
+          <b-form-invalid-feedback v-if="v$.confirmedPassword.$error" class="d-block">
+            <div v-if="v$.confirmedPassword.required.$invalid">Confirmation is required.</div>
+            <div v-else-if="v$.confirmedPassword.sameAs.$invalid">Passwords do not match.</div>
+            <div v-else>Unknown error</div>
+          </b-form-invalid-feedback>
         </div>
-        <b-form-invalid-feedback v-if="v$.confirmedPassword.$error">
-          <div v-if="!v$.confirmedPassword.required">Confirmation is required.</div>
-          <div v-if="v$.confirmedPassword.required && !v$.confirmedPassword.sameAs">
-            Passwords do not match.
-          </div>
-        </b-form-invalid-feedback>
       </b-form-group>
-        
+      
       <!-- Email -->
       <b-form-group label="Email" label-for="email">
         <b-form-input
           id="email"
-          type="email"
+          type="text"
           v-model="state.email"
           @blur="v$.email.$touch()"
           :state="getValidationState(v$.email)"
         />
         <b-form-invalid-feedback v-if="v$.email.$error">
-          <div v-if="!v$.email.required">Email is required.</div>
-          <div v-if="v$.email.required && !v$.email.email">Email must be valid.</div>
+          <div v-if="v$.email.required.$invalid">Email is required.</div>
+          <div v-else-if="v$.email.email.$invalid">Email must be valid.</div>
+          <div v-else>Unknown error</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
@@ -139,11 +145,10 @@
       <b-alert
         variant="danger"
         class="mt-3"
-        dismissible
-        v-if="state.submitError"
+        v-if="submitError"
         show
       >
-        Registration failed: {{ state.submitError }}
+        {{ submitError }}
       </b-alert>
 
       <div class="mt-2">
@@ -165,9 +170,13 @@ import { getCurrentInstance } from 'vue';
 window.axios = require('axios');
 export default {
   name: 'RegisterPage',
+
   setup() {
     const { proxy } = getCurrentInstance();
     const server_domain = proxy.$root.store.server_domain;
+    const usernameExistsError = ref('');
+    const hasNumber = value => /[0-9]/.test(value || '');
+    const hasSpecialChar = value => /[^A-Za-z0-9]/.test(value || '');
 
     const state = reactive({
       username: '',
@@ -177,8 +186,8 @@ export default {
       confirmedPassword: '',
       email: '',
       country: 'Select a country',
-      submitError: null,
     });
+    const submitError = ref(null);
 
     const showPassword = ref(false);
     const showConfirmPassword = ref(false);
@@ -208,6 +217,8 @@ export default {
         required,
         minLength: minLength(5),
         maxLength: maxLength(10),
+        hasNumber,
+        hasSpecialChar,
       },
       confirmedPassword: {
         required,
@@ -220,7 +231,8 @@ export default {
     const router = useRouter();
 
     // Helper for BootstrapVue validation state
-    const getValidationState = (field) => {
+    const getValidationState = (field, extraError = false) => {
+      if (extraError) return false; // force is-invalid
       return field.$dirty ? !field.$invalid : null;
     };
 
@@ -228,34 +240,34 @@ export default {
     const validationErrors = computed(() => {
       const errors = [];
       if (v$.value.username.$error) {
-        if (!v$.value.username.required) errors.push('Username is required.');
-        if (v$.value.username.required && !v$.value.username.minLength) errors.push('Username is too short (min 3).');
-        if (v$.value.username.required && !v$.value.username.maxLength) errors.push('Username is too long (max 8).');
-        if (v$.value.username.required && !v$.value.username.alpha) errors.push('Username must contain only letters.');
+        if (v$.value.username.required.$invalid) errors.push('Username is required.');
+        if (v$.value.username.minLength.$invalid) errors.push('Username is too short (min 3).');
+        if (v$.value.username.maxLength.$invalid) errors.push('Username is too long (max 8).');
+        if (v$.value.username.alpha.$invalid) errors.push('Username must contain only letters.');
       }
       if (v$.value.firstName.$error) {
-        if (!v$.value.firstName.required) errors.push('First name is required.');
-        if (v$.value.firstName.required && !v$.value.firstName.alpha) errors.push('First name must contain only letters.');
+        if (v$.value.firstName.required.$invalid) errors.push('First name is required.');
+        if (v$.value.firstName.alpha.$invalid) errors.push('First name must contain only letters.');
       }
       if (v$.value.lastName.$error) {
-        if (!v$.value.lastName.required) errors.push('Last name is required.');
-        if (v$.value.lastName.required && !v$.value.lastName.alpha) errors.push('Last name must contain only letters.');
+        if (v$.value.lastName.required.$invalid) errors.push('Last name is required.');
+        if (v$.value.lastName.alpha.$invalid) errors.push('Last name must contain only letters.');
       }
       if (v$.value.country.$error) {
-        if (state.country === 'Select a country' || !v$.value.country.required) errors.push('Country is required.');
+        if (v$.value.country.required.$invalid) errors.push('Country is required.');
       }
       if (v$.value.password.$error) {
-        if (!v$.value.password.required) errors.push('Password is required.');
-        if (v$.value.password.required && !v$.value.password.minLength) errors.push('Password is too short (min 5).');
-        if (v$.value.password.required && !v$.value.password.maxLength) errors.push('Password is too long (max 10).');
+        if (v$.value.password.required.$invalid) errors.push('Password is required.');
+        if (v$.value.password.minLength.$invalid) errors.push('Password is too short (min 5).');
+        if (v$.value.password.maxLength.$invalid) errors.push('Password is too long (max 10).');
       }
       if (v$.value.confirmedPassword.$error) {
-        if (!v$.value.confirmedPassword.required) errors.push('Confirm password is required.');
-        if (v$.value.confirmedPassword.required && !v$.value.confirmedPassword.sameAs) errors.push('Passwords do not match.');
+        if (v$.value.confirmedPassword.required.$invalid) errors.push('Confirm password is required.');
+        if (v$.value.confirmedPassword.sameAs.$invalid) errors.push('Passwords do not match.');
       }
       if (v$.value.email.$error) {
-        if (!v$.value.email.required) errors.push('Email is required.');
-        if (v$.value.email.required && !v$.value.email.email) errors.push('Email is not valid.');
+        if (v$.value.email.required.$invalid) errors.push('Email is required.');
+        if (v$.value.email.email.$invalid) errors.push('Email must be valid.');
       }
       return errors;
     });
@@ -265,7 +277,7 @@ export default {
       const valid = await v$.value.$validate();
 
       if (!valid) {
-        state.submitError = null;
+        submitError.value = null;
         showValidationSummary.value = true;
         return;
       }
@@ -282,14 +294,23 @@ export default {
           country: state.country,
         });
         router.push('/Login');
-      } catch (err) {
-        state.submitError = err.response?.data?.message || 'Unexpected error.';
+      }  catch (err) {
+        showValidationSummary.value = false;
+        if (err.response && err.response.status === 409) {
+          submitError.value = null;
+          usernameExistsError.value = 'Username already exists. Please choose a different username.';
+          v$.value.username.$touch();
+        } else {
+          submitError.value = err.response?.data?.message || 'Unexpected error.';
+        }
       }
     };
 
     return {
       state,
+      submitError,
       showPassword,
+      usernameExistsError,
       showConfirmPassword,
       showValidationSummary,
       countries,
