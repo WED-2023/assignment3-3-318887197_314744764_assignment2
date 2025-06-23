@@ -1,4 +1,3 @@
-
 <template>
   <div class="container mt-4" style="max-width: 400px;">
     <h2 class="mb-4">Login</h2>
@@ -8,37 +7,38 @@
         <b-form-input
           id="username"
           v-model="state.username"
-          :state="getValidationState(v$.username)"
+          :state="getValidationState(v$.username, !!loginFailedError)"
+          @input="loginFailedError = ''"
+          @blur="v$.username.$touch()"
         />
-        <b-form-invalid-feedback v-if="v$.username.$error">
-          Username is required.
+        <b-form-invalid-feedback v-if="v$.username.$error || loginFailedError">
+          <div v-if="v$.username.required.$invalid">Username is required.</div>
+          <div v-else-if="loginFailedError">{{ loginFailedError }}</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
       <!-- Password -->
       <b-form-group label="Password" label-for="password">
-        <b-form-input
-          id="password"
-          type="password"
-          v-model="state.password"
-          :state="getValidationState(v$.password)"
-        />
-        <b-form-invalid-feedback v-if="v$.password.$error">
-          Password is required.
+        <div class="input-group">
+          <b-form-input
+            id="password"
+            :type="showPassword ? 'text' : 'password'"
+            v-model="state.password"
+            :state="getValidationState(v$.password, !!loginFailedError)"
+            @input="loginFailedError = ''"
+            @blur="v$.password.$touch()"
+          />
+          <span class="input-group-text" style="cursor:pointer" @click="showPassword = !showPassword">
+            <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </span>
+        </div>
+        <b-form-invalid-feedback v-if="v$.password.$error || loginFailedError">
+          <div v-if="v$.password.required.$invalid">Password is required.</div>
+          <div v-else-if="loginFailedError">{{ loginFailedError }}</div>
         </b-form-invalid-feedback>
       </b-form-group>
 
       <b-button type="submit" variant="primary" class="w-100">Login</b-button>
-
-      <b-alert
-        variant="danger"
-        class="mt-3"
-        dismissible
-        v-if="state.submitError"
-        show
-      >
-        Login failed: {{ state.submitError }}
-      </b-alert>
 
       <div class="mt-2">
         Don’t have an account?
@@ -49,17 +49,25 @@
 </template>
 
 <script>
-import { reactive, getCurrentInstance } from 'vue';
+import { reactive, ref, getCurrentInstance } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
+import axios from 'axios';
+import { useRouter } from 'vue-router';
 
 export default {
   name: 'LoginPage',
   setup() {
+    const showPassword = ref(false);
+    const router = useRouter();
+    const { proxy } = getCurrentInstance();
+    const store = proxy.$root.store;
+    const server_domain = store.server_domain;
+    const attemptedLogin = ref(false);
+
     const state = reactive({
       username: '',
       password: '',
-      submitError: null,
     });
 
     const rules = {
@@ -68,32 +76,50 @@ export default {
     };
 
     const v$ = useVuelidate(rules, state);
+    const loginFailedError = ref('');
 
-    const getValidationState = (field) => {
-      return field.$dirty ? !field.$invalid : null;
+    const getValidationState = (field, hasServerError = false) => {
+      if (hasServerError) return false; // show red if server error
+      // Only show red if the field is dirty and invalid, otherwise no color
+      if (field.$dirty && field.$invalid) return false;
+      return null; 
     };
 
-     // Access server_domain from root store
-    const { proxy } = getCurrentInstance();
-    const server_domain = proxy.$root.store.server_domain;
-
     const login = async () => {
+      attemptedLogin.value = true;
+      loginFailedError.value = '';
+      v$.value.$touch();
       const valid = await v$.value.$validate();
       if (!valid) return;
 
+      axios.defaults.withCredentials = true; // Ensure cookies are sent with requests
       try {
-        await window.axios.post(server_domain + '/Login', {
+        await axios.post(server_domain + '/Login', {
           username: state.username,
           password: state.password,
-        });
-        window.store.login(state.username);
-        window.router.push('/main');
+          },
+          { withCredentials: true }
+        );
+
+        const meResponse = await axios.get(
+          server_domain + '/me',
+          { withCredentials: true }
+        );
+        
+        store.username = meResponse.data.username;
+        console.log('Logged in as:', store.username);
+        router.push({ name: 'main' });
       } catch (err) {
-        state.submitError = err.response?.data?.message || 'Unexpected error.';
+        if (err.response && err.response.status === 401) {
+          loginFailedError.value = 'Username or password is incorrect.';
+          v$.value.username.$touch();
+          v$.value.password.$touch();
+        } else {
+          loginFailedError.value = 'Unexpected error. Please try again.';
+        }
       }
     };
-
-    return { state, v$, login, getValidationState };
+    return { state, v$, login, getValidationState, loginFailedError, showPassword };
   },
 };
 </script>

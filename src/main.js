@@ -1,4 +1,4 @@
-import { createApp, reactive } from 'vue';
+import { createApp } from 'vue';
 import App from './App.vue';
 import routes from './router/index';
 import axios from 'axios';
@@ -14,6 +14,7 @@ import 'bootstrap-vue-3/dist/bootstrap-vue-3.css';
 import { BContainer, BRow, BCol } from 'bootstrap-vue-3';
 import Vuelidate from '@vuelidate/core';
 
+import store from './store';
 
 // Router setup
 const router = createRouter({
@@ -21,21 +22,6 @@ const router = createRouter({
   routes
 });
 
-// Shared store
-const store = reactive({
-  username: localStorage.getItem('username'),
-  server_domain: 'https://lenis.cs.bgu.ac.il',
-  login(username) {
-    localStorage.setItem('username', username);
-    this.username = username;
-    console.log('login', this.username);
-  },
-  logout() {
-    console.log('logout');
-    localStorage.removeItem('username');
-    this.username = undefined;
-  },
-});
 
 // Axios interceptors
 axios.interceptors.request.use((config) => config, (error) => Promise.reject(error));
@@ -57,6 +43,8 @@ app.component('BCol', BCol);
 
 // Global store
 app.config.globalProperties.store = store;
+
+store.checkAuth();
 
 // Mount app
 app.mount('#app');

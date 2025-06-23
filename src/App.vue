@@ -3,14 +3,14 @@
     <div id="nav" class="d-flex justify-content-between align-items-center">
       <div>
         <router-link :to="{ name: 'main' }">Recipes</router-link>
-        <span v-if="!store.username" class="ms-3">
-          Hello Guest
+        <span v-if="store.username" class="ms-3">
+          Hello {{ store.username }}
+          <button @click="logout" class="btn btn-link p-0 ms-2">Logout</button>
+        </span>
+        <span v-else>
+          Hello guest
           <router-link :to="{ name: 'register' }" class="ms-2">Register</router-link>
           <router-link :to="{ name: 'login' }" class="ms-2">Login</router-link>
-        </span>
-        <span v-else class="ms-3">
-          {{ store.username }}:
-          <button @click="logout" class="btn btn-link p-0 ms-2">Logout</button>
         </span>
       </div>
       <div>

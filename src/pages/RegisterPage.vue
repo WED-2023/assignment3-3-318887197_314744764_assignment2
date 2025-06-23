@@ -176,7 +176,7 @@ export default {
     const server_domain = proxy.$root.store.server_domain;
     const usernameExistsError = ref('');
     const hasNumber = value => /[0-9]/.test(value || '');
-    const hasSpecialChar = value => /[^A-Za-z0-9]/.test(value || '');
+    const hasSpecialChar = value => /[^A-Za-z0-9]/.test(value || ''); 
 
     const state = reactive({
       username: '',
