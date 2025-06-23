@@ -49,19 +49,18 @@
 </template>
 
 <script>
-import { reactive, ref, getCurrentInstance } from 'vue';
+import { reactive, ref } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import store from '@/store'; // Import store directly
 
 export default {
   name: 'LoginPage',
   setup() {
     const showPassword = ref(false);
     const router = useRouter();
-    const { proxy } = getCurrentInstance();
-    const store = proxy.$root.store;
     const server_domain = store.server_domain;
     const attemptedLogin = ref(false);
 
@@ -101,15 +100,23 @@ export default {
           { withCredentials: true }
         );
 
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const meResponse = await axios.get(
           server_domain + '/me',
           { withCredentials: true }
         );
+
+        await new Promise(resolve => setTimeout(resolve, 100));
         
+        console.log('Setting store.username to:', meResponse.data.username);
         store.username = meResponse.data.username;
-        console.log('Logged in as:', store.username);
+        console.log('Store.username is now:', store.username);
+        
         router.push({ name: 'main' });
       } catch (err) {
+        console.error('Login error:', err);
+        console.error('Error response:', err.response);
         if (err.response && err.response.status === 401) {
           loginFailedError.value = 'Username or password is incorrect.';
           v$.value.username.$touch();

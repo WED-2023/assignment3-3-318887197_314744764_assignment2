@@ -1,14 +1,13 @@
 import axios from 'axios';
 import { reactive } from 'vue';
 
-const state = reactive({
+const store = reactive({
   username: null,
-  server_domain: "https://lenis.cs.bgu.ac.il",
+  // TODO: change back to lenis.cs.bgu.ac.il
+  // server_domain: "https://lenis.cs.bgu.ac.il",
+  server_domain: "https://localhost:443",
   lastViewedRecipes: [],
-});
 
-const store = {
-  ...state,
   async checkAuth() {
     try {
       const response = await axios.get(this.server_domain + '/me', { withCredentials: true });
@@ -20,12 +19,10 @@ const store = {
 
   login(username) {
     this.username = username;
-    console.log("login", this.username);
   },
 
   logout() {
     this.username = undefined;
-    console.log("logout");
   },
 
    // Add this method to track last viewed recipes
@@ -36,6 +33,6 @@ const store = {
       this.lastViewedRecipes = this.lastViewedRecipes.slice(0, 3);
     }
   }
-};
+});
 
 export default store;
