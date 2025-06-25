@@ -1,132 +1,160 @@
 <template>
-  <div class="container mt-4" style="max-width: 400px;">
-    <h2 class="mb-4">Login</h2>
-    <b-form @submit.prevent="login">
-      <!-- Username -->
-      <b-form-group label="Username" label-for="username">
-        <b-form-input
-          id="username"
-          v-model="state.username"
-          :state="getValidationState(v$.username, !!loginFailedError)"
-          @input="loginFailedError = ''"
-          @blur="v$.username.$touch()"
-        />
-        <b-form-invalid-feedback v-if="v$.username.$error || loginFailedError">
-          <div v-if="v$.username.required.$invalid">Username is required.</div>
-          <div v-else-if="loginFailedError">{{ loginFailedError }}</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <!-- Password -->
-      <b-form-group label="Password" label-for="password">
-        <div class="input-group">
-          <b-form-input
-            id="password"
-            :type="showPassword ? 'text' : 'password'"
-            v-model="state.password"
-            :state="getValidationState(v$.password, !!loginFailedError)"
-            @input="loginFailedError = ''"
-            @blur="v$.password.$touch()"
-          />
-          <span class="input-group-text" style="cursor:pointer" @click="showPassword = !showPassword">
-            <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </span>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow">
+          <div class="card-body">
+            <h2 class="card-title text-center mb-4">Login</h2>
+            
+            <form @submit.prevent="handleLogin">
+              <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  v-model="loginForm.username"
+                  :class="{ 'is-invalid': errors.username }"
+                  required
+                />
+                <div v-if="errors.username" class="invalid-feedback">
+                  {{ errors.username }}
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="password"
+                  v-model="loginForm.password"
+                  :class="{ 'is-invalid': errors.password }"
+                  required
+                />
+                <div v-if="errors.password" class="invalid-feedback">
+                  {{ errors.password }}
+                </div>
+              </div>
+              
+              <div v-if="authError" class="alert alert-danger">
+                {{ authError }}
+              </div>
+              
+              <button type="submit" class="btn btn-primary w-100" :disabled="authLoading">
+                <span v-if="authLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                {{ authLoading ? 'Logging in...' : 'Login' }}
+              </button>
+            </form>
+            
+            <div class="text-center mt-3">
+              <p>Don't have an account? <router-link :to="{ name: 'register' }">Register here</router-link></p>
+            </div>
+          </div>
         </div>
-        <b-form-invalid-feedback v-if="v$.password.$error || loginFailedError">
-          <div v-if="v$.password.required.$invalid">Password is required.</div>
-          <div v-else-if="loginFailedError">{{ loginFailedError }}</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <b-button type="submit" variant="primary" class="w-100">Login</b-button>
-
-      <div class="mt-2">
-        Don’t have an account?
-        <router-link to="/register">Register here</router-link>
       </div>
-    </b-form>
+    </div>
   </div>
 </template>
 
-<script>
-import { reactive, ref } from 'vue';
-import { useVuelidate } from '@vuelidate/core';
-import { required } from '@vuelidate/validators';
-import axios from 'axios';
+<script setup>
+import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import store from '@/store'; // Import store directly
+import store from '@/store';
+import { AuthAPI } from '@/composables/AuthAPI';
 
-export default {
-  name: 'LoginPage',
-  setup() {
-    const showPassword = ref(false);
-    const router = useRouter();
-    const server_domain = store.server_domain;
-    const attemptedLogin = ref(false);
+const router = useRouter();
 
-    const state = reactive({
-      username: '',
-      password: '',
+// Use composables
+const { login, isLoading: authLoading, error: authError } = AuthAPI();
+
+// Reactive data
+const loginForm = reactive({
+  username: '',
+  password: ''
+});
+
+const errors = ref({});
+
+const validateForm = () => {
+  errors.value = {};
+  
+  if (!loginForm.username) {
+    errors.value.username = 'Username is required';
+  } else if (loginForm.username.length < 3 || loginForm.username.length > 8) {
+    errors.value.username = 'Username must be 3-8 characters';
+  } else if (!/^[a-zA-Z]+$/.test(loginForm.username)) {
+    errors.value.username = 'Username must contain only letters';
+  }
+  
+  if (!loginForm.password) {
+    errors.value.password = 'Password is required';
+  } else if (loginForm.password.length < 5 || loginForm.password.length > 10) {
+    errors.value.password = 'Password must be 5-10 characters';
+  }
+  
+  return Object.keys(errors.value).length === 0;
+};
+
+const handleLogin = async () => {
+  if (!validateForm()) {
+    return;
+  }
+
+  try {
+    // Use composable to login
+    await login({
+      username: loginForm.username,
+      password: loginForm.password
     });
 
-    const rules = {
-      username: { required },
-      password: { required },
-    };
-
-    const v$ = useVuelidate(rules, state);
-    const loginFailedError = ref('');
-
-    const getValidationState = (field, hasServerError = false) => {
-      if (hasServerError) return false; // show red if server error
-      // Only show red if the field is dirty and invalid, otherwise no color
-      if (field.$dirty && field.$invalid) return false;
-      return null; 
-    };
-
-    const login = async () => {
-      attemptedLogin.value = true;
-      loginFailedError.value = '';
-      v$.value.$touch();
-      const valid = await v$.value.$validate();
-      if (!valid) return;
-
-      axios.defaults.withCredentials = true; // Ensure cookies are sent with requests
-      try {
-        await axios.post(server_domain + '/Login', {
-          username: state.username,
-          password: state.password,
-          },
-          { withCredentials: true }
-        );
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        const meResponse = await axios.get(
-          server_domain + '/me',
-          { withCredentials: true }
-        );
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        console.log('Setting store.username to:', meResponse.data.username);
-        store.username = meResponse.data.username;
-        console.log('Store.username is now:', store.username);
-        
-        router.push({ name: 'main' });
-      } catch (err) {
-        console.error('Login error:', err);
-        console.error('Error response:', err.response);
-        if (err.response && err.response.status === 401) {
-          loginFailedError.value = 'Username or password is incorrect.';
-          v$.value.username.$touch();
-          v$.value.password.$touch();
-        } else {
-          loginFailedError.value = 'Unexpected error. Please try again.';
-        }
-      }
-    };
-    return { state, v$, login, getValidationState, loginFailedError, showPassword };
-  },
+    // Set username in store
+    store.username = loginForm.username;
+    
+    // Redirect to main page
+    router.push({ name: 'main' });
+    
+  } catch (err) {
+    console.error('Login failed:', err);
+    if (err.response?.status === 401) {
+      errors.value.password = 'Invalid username or password';
+    }
+  }
 };
 </script>
+
+<style scoped>
+.container {
+  margin-top: 5rem;
+}
+
+.card {
+  border: none;
+  border-radius: 10px;
+}
+
+.card-title {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  border-color: #3498db;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  border-color: #2980b9;
+}
+
+a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+</style>

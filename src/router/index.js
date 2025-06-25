@@ -26,11 +26,23 @@ const routes = [
     path: "/recipe/:recipeId",
     name: "recipe",
     component: () => import("../pages/RecipeViewPage.vue"),
+    props: true
   },
   {
     path: "/about",
     name: "about",
     component: () => import("../pages/AboutPage.vue"),
+  },
+  {
+    path: '/favorites',
+    name: 'favorites',
+    component: () => import('@/pages/FavoritePage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+  path: '/personal',
+  name: 'personal',
+  component: () => import('@/pages/PersonalPage.vue')
   },
   {
     path: "/:catchAll(.*)",

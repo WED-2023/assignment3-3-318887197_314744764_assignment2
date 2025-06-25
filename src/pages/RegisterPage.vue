@@ -1,324 +1,282 @@
 <template>
-  <div class="container mt-4" style="max-width: 500px;">
-    <h2 class="mb-4">Register</h2>
-    <b-form @submit.prevent="register">
-      <!-- Validation summary alert -->
-      <b-alert
-        variant="danger"
-        class="mt-3"
-        v-if="showValidationSummary && validationErrors.length"
-        show
-      >
-        <ul class="mb-0">
-          <li v-for="(err, idx) in validationErrors" :key="idx">{{ err }}</li>
-        </ul>
-      </b-alert>
-
-      <!-- Username -->
-      <b-form-group label="Username" label-for="username">
-        <b-form-input
-          id="username"
-          v-model="state.username"
-          @blur="v$.username.$touch()"
-          @input="usernameExistsError = ''"
-          :state="getValidationState(v$.username, !!usernameExistsError)"
-        />
-        <b-form-invalid-feedback v-if="v$.username.$error || usernameExistsError">
-          <div v-if="v$.username.required.$invalid">Username is required.</div>
-          <div v-else-if="v$.username.minLength.$invalid">Username is too short (min 3).</div>
-          <div v-else-if="v$.username.maxLength.$invalid">Username is too long (max 8).</div>
-          <div v-else-if="v$.username.alpha.$invalid">Username must contain only letters.</div>
-          <div v-else-if="usernameExistsError">{{ usernameExistsError }}</div>
-          <div v-else>Unknown error</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <!-- First Name -->
-      <b-form-group label="First Name" label-for="firstName">
-        <b-form-input
-          id="firstName"
-          v-model="state.firstName"
-          @blur="v$.firstName.$touch()"
-          :state="getValidationState(v$.firstName)"
-        />
-        <b-form-invalid-feedback v-if="v$.firstName.$error">
-          <div v-if="v$.firstName.required.$invalid">First name is required.</div>
-          <div v-else-if="v$.firstName.alpha.$invalid">First name must contain only letters.</div>
-          <div v-else>Unknown error</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <!-- Last Name -->
-      <b-form-group label="Last Name" label-for="lastName">
-        <b-form-input
-          id="lastName"
-          v-model="state.lastName"
-          @blur="v$.lastName.$touch()"
-          :state="getValidationState(v$.lastName)"
-        />
-        <b-form-invalid-feedback v-if="v$.lastName.$error">
-          <div v-if="v$.lastName.required.$invalid">Last name is required.</div>
-          <div v-else-if="v$.lastName.alpha.$invalid">Last name must contain only letters.</div>
-          <div v-else>Unknown error</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <!-- Country -->
-      <b-form-group label="Country" label-for="country">
-        <b-form-select
-          id="country"
-          v-model="state.country"
-          :options="countries"
-          @change="v$.country.$touch()"
-          :state="getValidationState(v$.country)"
-        />
-        <b-form-invalid-feedback v-if="v$.country.$error">
-          <div v-if="v$.country.required.$invalid">Country is required.</div>
-          <div v-else>Unknown error</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <!-- Password -->
-        <b-form-group label="Password" label-for="password">
-          <div class="input-group">
-            <b-form-input
-              id="password"
-              :type="showPassword ? 'text' : 'password'"
-              v-model="state.password"
-              @blur="v$.password.$touch()"
-              :state="getValidationState(v$.password)"
-            />
-            <span class="input-group-text" style="cursor:pointer" @click="showPassword = !showPassword">
-              <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-            </span>
-            <b-form-invalid-feedback v-if="v$.password.$error" class="d-block">
-              <div v-if="v$.password.required.$invalid">Password is required.</div>
-              <div v-else-if="v$.password.minLength.$invalid">Password is too short (min 5).</div>
-              <div v-else-if="v$.password.maxLength.$invalid">Password is too long (max 10).</div>
-              <div v-else-if="v$.password.hasNumber.$invalid">Password must contain at least one number.</div>
-              <div v-else-if="v$.password.hasSpecialChar.$invalid">Password must contain at least one special character.</div>
-              <div v-else>Unknown error</div>
-            </b-form-invalid-feedback>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow">
+          <div class="card-body">
+            <h2 class="card-title text-center mb-4">Register</h2>
+            
+            <form @submit.prevent="handleRegister">
+              <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  v-model="registerForm.username"
+                  :class="{ 'is-invalid': errors.username }"
+                  required
+                />
+                <div v-if="errors.username" class="invalid-feedback">
+                  {{ errors.username }}
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="firstname" class="form-label">First Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="firstname"
+                    v-model="registerForm.firstname"
+                    :class="{ 'is-invalid': errors.firstname }"
+                    required
+                  />
+                  <div v-if="errors.firstname" class="invalid-feedback">
+                    {{ errors.firstname }}
+                  </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="lastname" class="form-label">Last Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="lastname"
+                    v-model="registerForm.lastname"
+                    :class="{ 'is-invalid': errors.lastname }"
+                    required
+                  />
+                  <div v-if="errors.lastname" class="invalid-feedback">
+                    {{ errors.lastname }}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="email"
+                  v-model="registerForm.email"
+                  :class="{ 'is-invalid': errors.email }"
+                  required
+                />
+                <div v-if="errors.email" class="invalid-feedback">
+                  {{ errors.email }}
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="country" class="form-label">Country</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="country"
+                  v-model="registerForm.country"
+                  :class="{ 'is-invalid': errors.country }"
+                  required
+                />
+                <div v-if="errors.country" class="invalid-feedback">
+                  {{ errors.country }}
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="password"
+                  v-model="registerForm.password"
+                  :class="{ 'is-invalid': errors.password }"
+                  required
+                />
+                <div class="form-text">Must be 5-10 characters with at least one number and one special character</div>
+                <div v-if="errors.password" class="invalid-feedback">
+                  {{ errors.password }}
+                </div>
+              </div>
+              
+              <div v-if="authError" class="alert alert-danger">
+                {{ authError }}
+              </div>
+              
+              <div v-if="successMessage" class="alert alert-success">
+                {{ successMessage }}
+              </div>
+              
+              <button type="submit" class="btn btn-primary w-100" :disabled="authLoading">
+                <span v-if="authLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                {{ authLoading ? 'Registering...' : 'Register' }}
+              </button>
+            </form>
+            
+            <div class="text-center mt-3">
+              <p>Already have an account? <router-link :to="{ name: 'login' }">Login here</router-link></p>
+            </div>
           </div>
-        </b-form-group>
-
-      <!-- Confirm Password -->
-      <b-form-group label="Confirm Password" label-for="confirmedPassword">
-        <div class="input-group">
-          <b-form-input
-            id="confirmedPassword"
-            :type="showConfirmPassword ? 'text' : 'password'"
-            class="form-control"
-            v-model="state.confirmedPassword"
-            @blur="v$.confirmedPassword.$touch()"
-            :state="getValidationState(v$.confirmedPassword)"
-          />
-          <span class="input-group-text" style="cursor:pointer" @click="showConfirmPassword = !showConfirmPassword">
-            <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </span>
-          <b-form-invalid-feedback v-if="v$.confirmedPassword.$error" class="d-block">
-            <div v-if="v$.confirmedPassword.required.$invalid">Confirmation is required.</div>
-            <div v-else-if="v$.confirmedPassword.sameAs.$invalid">Passwords do not match.</div>
-            <div v-else>Unknown error</div>
-          </b-form-invalid-feedback>
         </div>
-      </b-form-group>
-      
-      <!-- Email -->
-      <b-form-group label="Email" label-for="email">
-        <b-form-input
-          id="email"
-          type="text"
-          v-model="state.email"
-          @blur="v$.email.$touch()"
-          :state="getValidationState(v$.email)"
-        />
-        <b-form-invalid-feedback v-if="v$.email.$error">
-          <div v-if="v$.email.required.$invalid">Email is required.</div>
-          <div v-else-if="v$.email.email.$invalid">Email must be valid.</div>
-          <div v-else>Unknown error</div>
-        </b-form-invalid-feedback>
-      </b-form-group>
-
-      <b-button type="submit" variant="success" class="w-100">Register</b-button>
-
-      <b-alert
-        variant="danger"
-        class="mt-3"
-        v-if="submitError"
-        show
-      >
-        {{ submitError }}
-      </b-alert>
-
-      <div class="mt-2">
-        Already have an account?
-        <router-link to="/Login">Login here</router-link>
       </div>
-    </b-form>
+    </div>
   </div>
 </template>
 
-<script>
-import { reactive, ref, computed } from 'vue';
-import { useVuelidate } from '@vuelidate/core';
-import { required, minLength, maxLength, alpha, sameAs, email } from '@vuelidate/validators';
-import rawCountries from '../assets/countries';
+<script setup>
+import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { getCurrentInstance } from 'vue';
+import { AuthAPI } from '@/composables/AuthAPI';
 
-window.axios = require('axios');
-export default {
-  name: 'RegisterPage',
+const router = useRouter();
 
-  setup() {
-    const { proxy } = getCurrentInstance();
-    const server_domain = proxy.$root.store.server_domain;
-    const usernameExistsError = ref('');
-    const hasNumber = value => /[0-9]/.test(value || '');
-    const hasSpecialChar = value => /[^A-Za-z0-9]/.test(value || ''); 
+// Use composables
+const { register, isLoading: authLoading, error: authError } = AuthAPI();
 
-    const state = reactive({
-      username: '',
-      firstName: '',
-      lastName: '',
-      password: '',
-      confirmedPassword: '',
-      email: '',
-      country: 'Select a country',
-    });
-    const submitError = ref(null);
+// Reactive data
+const registerForm = reactive({
+  username: '',
+  firstname: '',
+  lastname: '',
+  email: '',
+  country: '',
+  password: ''
+});
 
-    const showPassword = ref(false);
-    const showConfirmPassword = ref(false);
-    const showValidationSummary = ref(false);
-    const passwordValue = computed(() => state.password);
+const errors = ref({});
+const successMessage = ref('');
 
-    // Countries: keep "Select a country" as the first option
-    const countries = [
-      'Select a country',
-      ...rawCountries.map(c => c.name.common).sort((a, b) => a.localeCompare(b))
-    ];
+const validateForm = () => {
+  errors.value = {};
+  
+  // Username validation
+  if (!registerForm.username) {
+    errors.value.username = 'Username is required';
+  } else if (registerForm.username.length < 3 || registerForm.username.length > 8) {
+    errors.value.username = 'Username must be 3-8 characters';
+  } else if (!/^[a-zA-Z]+$/.test(registerForm.username)) {
+    errors.value.username = 'Username must contain only letters';
+  }
+  
+  // First name validation
+  if (!registerForm.firstname) {
+    errors.value.firstname = 'First name is required';
+  } else if (registerForm.firstname.length > 100) {
+    errors.value.firstname = 'First name must be less than 100 characters';
+  }
+  
+  // Last name validation
+  if (!registerForm.lastname) {
+    errors.value.lastname = 'Last name is required';
+  } else if (registerForm.lastname.length > 100) {
+    errors.value.lastname = 'Last name must be less than 100 characters';
+  }
+  
+  // Email validation
+  if (!registerForm.email) {
+    errors.value.email = 'Email is required';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) {
+    errors.value.email = 'Please enter a valid email address';
+  } else if (registerForm.email.length > 255) {
+    errors.value.email = 'Email must be less than 255 characters';
+  }
+  
+  // Country validation
+  if (!registerForm.country) {
+    errors.value.country = 'Country is required';
+  } else if (registerForm.country.length > 100) {
+    errors.value.country = 'Country must be less than 100 characters';
+  }
+  
+  // Password validation
+  if (!registerForm.password) {
+    errors.value.password = 'Password is required';
+  } else if (registerForm.password.length < 5 || registerForm.password.length > 10) {
+    errors.value.password = 'Password must be 5-10 characters';
+  } else if (!/(?=.*[0-9])(?=.*[^a-zA-Z0-9])/.test(registerForm.password)) {
+    errors.value.password = 'Password must contain at least one number and one special character';
+  }
+  
+  return Object.keys(errors.value).length === 0;
+};
 
-    // Validation rules
-    const rules = {
-      username: {
-        required,
-        minLength: minLength(3),
-        maxLength: maxLength(8),
-        alpha,
-      },
-      firstName: { required, alpha },
-      lastName: { required, alpha },
-      country: {
-        required: value => value && value !== 'Select a country',
-      },
-      password: {
-        required,
-        minLength: minLength(5),
-        maxLength: maxLength(10),
-        hasNumber,
-        hasSpecialChar,
-      },
-      confirmedPassword: {
-        required,
-        sameAs: sameAs(passwordValue),
-      },
-      email: { required, email },
-    };
+const handleRegister = async () => {
+  successMessage.value = '';
+  
+  if (!validateForm()) {
+    return;
+  }
 
-    const v$ = useVuelidate(rules, state);
-    const router = useRouter();
-
-    // Helper for BootstrapVue validation state
-    const getValidationState = (field, extraError = false) => {
-      if (extraError) return false; // force is-invalid
-      return field.$dirty ? !field.$invalid : null;
-    };
-
-    // Computed validation errors for summary
-    const validationErrors = computed(() => {
-      const errors = [];
-      if (v$.value.username.$error) {
-        if (v$.value.username.required.$invalid) errors.push('Username is required.');
-        if (v$.value.username.minLength.$invalid) errors.push('Username is too short (min 3).');
-        if (v$.value.username.maxLength.$invalid) errors.push('Username is too long (max 8).');
-        if (v$.value.username.alpha.$invalid) errors.push('Username must contain only letters.');
-      }
-      if (v$.value.firstName.$error) {
-        if (v$.value.firstName.required.$invalid) errors.push('First name is required.');
-        if (v$.value.firstName.alpha.$invalid) errors.push('First name must contain only letters.');
-      }
-      if (v$.value.lastName.$error) {
-        if (v$.value.lastName.required.$invalid) errors.push('Last name is required.');
-        if (v$.value.lastName.alpha.$invalid) errors.push('Last name must contain only letters.');
-      }
-      if (v$.value.country.$error) {
-        if (v$.value.country.required.$invalid) errors.push('Country is required.');
-      }
-      if (v$.value.password.$error) {
-        if (v$.value.password.required.$invalid) errors.push('Password is required.');
-        if (v$.value.password.minLength.$invalid) errors.push('Password is too short (min 5).');
-        if (v$.value.password.maxLength.$invalid) errors.push('Password is too long (max 10).');
-      }
-      if (v$.value.confirmedPassword.$error) {
-        if (v$.value.confirmedPassword.required.$invalid) errors.push('Confirm password is required.');
-        if (v$.value.confirmedPassword.sameAs.$invalid) errors.push('Passwords do not match.');
-      }
-      if (v$.value.email.$error) {
-        if (v$.value.email.required.$invalid) errors.push('Email is required.');
-        if (v$.value.email.email.$invalid) errors.push('Email must be valid.');
-      }
-      return errors;
+  try {
+    // Use composable to register
+    await register({
+      username: registerForm.username,
+      firstname: registerForm.firstname,
+      lastname: registerForm.lastname,
+      email: registerForm.email,
+      country: registerForm.country,
+      password: registerForm.password
     });
 
-    const register = async () => {
-      v$.value.$touch();
-      const valid = await v$.value.$validate();
-
-      if (!valid) {
-        submitError.value = null;
-        showValidationSummary.value = true;
-        return;
-      }
-
-      showValidationSummary.value = false;
-
-      try {
-        await window.axios.post(server_domain + '/Register', {
-          username: state.username,
-          firstname: state.firstName,
-          lastname: state.lastName,
-          password: state.password,
-          email: state.email,
-          country: state.country,
-        });
-        router.push('/Login');
-      }  catch (err) {
-        showValidationSummary.value = false;
-        if (err.response && err.response.status === 409) {
-          submitError.value = null;
-          usernameExistsError.value = 'Username already exists. Please choose a different username.';
-          v$.value.username.$touch();
-        } else {
-          submitError.value = err.response?.data?.message || 'Unexpected error.';
-        }
-      }
-    };
-
-    return {
-      state,
-      submitError,
-      showPassword,
-      usernameExistsError,
-      showConfirmPassword,
-      showValidationSummary,
-      countries,
-      register,
-      v$,
-      validationErrors,
-      getValidationState,
-    };
-  },
+    successMessage.value = 'Registration successful! You can now log in.';
+    
+    // Reset form
+    Object.keys(registerForm).forEach(key => {
+      registerForm[key] = '';
+    });
+    
+    // Redirect to login after 2 seconds
+    setTimeout(() => {
+      router.push({ name: 'login' });
+    }, 2000);
+    
+  } catch (err) {
+    console.error('Registration failed:', err);
+    if (err.response?.status === 409) {
+      errors.value.username = 'Username already taken';
+    }
+  }
 };
 </script>
+
+<style scoped>
+.container {
+  margin-top: 3rem;
+}
+
+.card {
+  border: none;
+  border-radius: 10px;
+}
+
+.card-title {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  border-color: #3498db;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  border-color: #2980b9;
+}
+
+a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.form-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+</style>

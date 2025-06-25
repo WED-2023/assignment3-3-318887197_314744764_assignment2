@@ -4,6 +4,7 @@ import routes from './router/index';
 import axios from 'axios';
 import VueAxios from 'vue-axios';
 import { createRouter, createWebHistory } from 'vue-router';
+import { AuthAPI } from '@/composables/AuthAPI'
 
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.js';
@@ -36,6 +37,8 @@ app.use(VueAxios, axios);
 app.use(BootstrapVue3);
 app.use(Vuelidate); 
 
+const { checkAuth } = AuthAPI()
+
 // Register global BootstrapVue3 components
 app.component('BContainer', BContainer);
 app.component('BRow', BRow);
@@ -44,7 +47,10 @@ app.component('BCol', BCol);
 // Global store
 app.config.globalProperties.store = store;
 
-store.checkAuth();
-
-// Mount app
-app.mount('#app');
+checkAuth().then(() => {
+  app.mount('#app')
+}).catch(() => {
+  // Handle auth check failure
+  console.log('No existing session found')
+  app.mount('#app')
+})

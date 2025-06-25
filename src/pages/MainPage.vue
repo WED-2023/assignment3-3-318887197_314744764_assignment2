@@ -1,110 +1,457 @@
 <template>
   <div class="container">
-    <div v-if="!isReady" class="text-center">
-      <p>Loading...</p>
-    </div>
+    <h1 class="mt-5 mb-4">Welcome to Recipe World</h1>
     
-    <div v-else>
-      <!-- Always show 3 random recipes (clear and clickable for everyone) -->
-      <RecipePreviewList 
-        title="Random Recipes" 
-        class="RandomRecipes center"
-      />
-
-      <!-- Show content based on user login status -->
-      <div v-if="username">
-        <!-- User is logged in -->
-        <div>
-          <h3>Your Personalized Recipes</h3>
-          <!-- Personalized content will go here -->
-        </div>
+    <!-- Random Recipes Section -->
+    <section class="mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Random Recipes</h2>
+        <button @click="refreshData" class="btn btn-outline-primary btn-sm" :disabled="isRefreshing">
+          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+          {{ isRefreshing ? 'Refreshing...' : 'Refresh' }}
+        </button>
       </div>
       
-      <div v-else>
-        <!-- User is NOT logged in - show blurred recipes -->
-        <div class="text-center mt-4 mb-1">
-          <router-link :to="{ name: 'login' }" class="btn btn-success px-4">
-            You need to be logged in to see this
-          </router-link>
+      <div v-if="randomLoading" class="text-center">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
-        <RecipePreviewList
-          title="Personalized Recipes"
-          class="RandomRecipes blur center"
-        />
+      </div>
+      <div v-else-if="mainPageRandomError" class="alert alert-danger">
+        {{ mainPageRandomError }}
+        <button @click="fetchRandomRecipes(true)" class="btn btn-sm btn-outline-danger ms-2">Retry</button>
+      </div>
+        <div v-else class="row">
+          <div v-for="recipe in randomRecipes" :key="recipe.id" class="col-md-4 mb-4">
+            <RecipePreview 
+              :recipe="recipe" 
+              :watchedRecipeIds="localWatchedRecipeIds"
+              :favoriteRecipeIds="favoriteRecipeIds"
+              :likedRecipeIds="likedRecipeIds"
+              @favoriteToggled="handleFavoriteToggled"
+              @likeToggled="handleLikeToggled"
+            />
+          </div>
+        </div>
+    </section>
+
+    <!-- Second Section: Last Viewed (logged in) OR Blurred Random (not logged in) -->
+    <section class="mb-5">
+      <!-- Logged in users: Show last viewed recipes -->
+      <div v-if="store.username">
+        <h2 class="mb-3">Your Recently Viewed</h2>
+        <div v-if="lastViewedLoading" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <div v-else-if="lastViewedError" class="alert alert-warning">
+          {{ lastViewedError }}
+        </div>
+        <div v-else-if="lastViewedRecipes.length === 0" class="alert alert-info">
+          You haven't viewed any recipes yet. Start exploring!
+        </div>
+          <div v-else class="row">
+            <div v-for="recipe in lastViewedRecipes" :key="recipe.id" class="col-md-4 mb-4">
+              <RecipePreview 
+                :recipe="recipe" 
+                :watchedRecipeIds="localWatchedRecipeIds"
+                :favoriteRecipeIds="favoriteRecipeIds"
+                :likedRecipeIds="likedRecipeIds"
+                @favoriteToggled="handleFavoriteToggled"
+                @likeToggled="handleLikeToggled"
+              />
+            </div>
+          </div>
       </div>
 
-      <!-- Show last viewed recipes for logged-in users (if any) -->
-      <div v-if="username && store.lastViewedRecipes.length">
-        <h3>Last Viewed Recipes</h3>
-        <div class="row">
-          <div class="col" v-for="r in store.lastViewedRecipes" :key="r.id">
-            <RecipePreview class="recipePreview" :recipe="r" />
+      <!-- Not logged in: Show blurred random recipes with login prompt -->
+      <div v-else>
+        <div class="position-relative">
+          <h2 class="mb-3">Your Recently Viewed</h2>
+          <div v-if="blurredRandomLoading" class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div v-else class="row">
+            <div v-for="recipe in blurredRandomRecipes" :key="`blurred-${recipe.id}`" class="col-md-4 mb-4">
+              <div class="blurred-recipe-container">
+                <RecipePreview 
+                  :recipe="recipe" 
+                  :isBlurred="true" 
+                  :isClickable="false"
+                  :watchedRecipeIds="[]"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <!-- Login overlay -->
+          <div class="login-overlay">
+            <div class="login-prompt">
+              <h4 class="mb-3">See Your Recently Viewed Recipes</h4>
+              <p class="mb-3">Login to track and view your recipe history</p>
+              <router-link :to="{ name: 'login' }" class="btn btn-primary btn-lg">
+                Login Now
+              </router-link>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted } from 'vue';
 import store from '@/store';
-import RecipePreviewList from "../components/RecipePreviewList.vue";
-import RecipePreview from "../components/RecipePreview.vue";
-import { computed, ref, onMounted } from 'vue';
+import { RecipeAPI } from '@/composables/RecipeAPI';
+import { WatchedAPI } from '@/composables/WatchedAPI';
+import { UserData } from '@/composables/UserData';
+import RecipePreview from '@/components/RecipePreview.vue';
 
-export default {
-  components: {
-    RecipePreviewList,
-    RecipePreview,
-  },
-  setup() {
-    const username = computed(() => store.username);
-    const isReady = ref(false);
-    
-    onMounted(() => {
-      // Small delay to ensure the auth check from main.js has completed
-      setTimeout(() => {
-        isReady.value = true;
-      }, 100);
-    });
-    
-    // TODO: Add logic here for logged-in users
-    // When store.username is defined, make GET request to server
-    
-    return { store, username, isReady };
+// Use composables (don't destructure the error from RecipeAPI)
+const { getRandomRecipes, getRecipeInfo, isLoading: randomLoading } = RecipeAPI();
+const { getRecentWatched, isLoading: lastViewedLoading, error: lastViewedError } = WatchedAPI();
+const { favoriteRecipeIds, likedRecipeIds, watchedRecipeIds: userWatchedIds, fetchUserData, fetchUserPreferencesOnly } = UserData();
+// Reactive data
+const randomRecipes = ref([]);
+const lastViewedRecipes = ref([]);
+const blurredRandomRecipes = ref([]);
+const localWatchedRecipeIds = ref([]);
+const blurredRandomLoading = ref(false);
+const isRefreshing = ref(false);
+
+// Create local error variable controlled only by MainPage
+const mainPageRandomError = ref('');
+
+// Event handlers for updating user data
+const handleFavoriteToggled = (event) => {
+  const { recipeId, newState } = event;
+  console.log('MainPage: Favorite toggled', { recipeId, newState });
+  
+  if (newState) {
+    // Add to favorites
+    if (!favoriteRecipeIds.value.includes(String(recipeId))) {
+      favoriteRecipeIds.value.push(String(recipeId));
+    }
+  } else {
+    // Remove from favorites
+    favoriteRecipeIds.value = favoriteRecipeIds.value.filter(id => id !== String(recipeId));
   }
 };
+
+const handleLikeToggled = (event) => {
+  const { recipeId, newState } = event;
+  console.log('MainPage: Like toggled', { recipeId, newState });
+  
+  if (newState) {
+    // Add to likes
+    if (!likedRecipeIds.value.includes(String(recipeId))) {
+      likedRecipeIds.value.push(String(recipeId));
+    }
+  } else {
+    // Remove from likes
+    likedRecipeIds.value = likedRecipeIds.value.filter(id => id !== String(recipeId));
+  }
+};
+
+const fetchRandomRecipes = async (forceRefresh = false) => {
+  console.log('MainPage: Fetching data', { forceRefresh, username: store.username });
+
+  // Clear MainPage error on new fetch
+  mainPageRandomError.value = '';
+
+  if (!forceRefresh && randomRecipes.value.length > 0) {
+    console.log('MainPage: Data already loaded from cache, skipping fetch');
+    return;
+  }
+
+  // Always fetch 3 random recipes for the first section with error handling
+  console.log('MainPage: Fetching random recipes...');
+  let randomData = [];
+  
+  try {
+    randomData = await getRandomRecipes(3);
+    randomRecipes.value = randomData;
+    console.log('MainPage: Random recipes result:', randomData);
+  } catch (err) {
+    console.error('MainPage: Error fetching random recipes:', err);
+    
+    // Check if it's a 402 error specifically
+    if (err.response && err.response.status === 402) {
+      // Set MainPage custom error message for 402
+      mainPageRandomError.value = 'Spoonacular API key exhausted';
+    } else {
+      // Set MainPage custom error message for other errors
+      mainPageRandomError.value = 'Failed to fetch random recipes';
+    }
+    
+    randomRecipes.value = [];
+  }
+
+  let lastViewedData = [];
+  let blurredRandomData = [];
+  let watchedIds = [];
+
+  if (store.username) {
+    console.log('MainPage: User is logged in, fetching watched recipes...');
+    // User is logged in: fetch recent watched recipes and all watched IDs
+    try {
+      // Get all watched recipe IDs for marking viewed recipes
+      // Fetch user data FIRST (favorites, likes, watched) - ONLY ONCE HERE
+      console.log('MainPage: Fetching user data...');
+      await fetchUserData();
+
+      // Use the watched IDs that were already fetched by fetchUserData
+      watchedIds = userWatchedIds.value.map(id => Number(id));
+      localWatchedRecipeIds.value = userWatchedIds.value;
+      console.log('MainPage: Using watched IDs from UserData:', watchedIds);
+
+      // Get recent watched recipe IDs (last 3) - only if there are watched recipes
+      if (watchedIds.length > 0) {
+        console.log('MainPage: Fetching recent watched recipes...');
+        const recentWatchedIds = await getRecentWatched(3);
+        console.log('MainPage: Recent watched IDs:', recentWatchedIds);
+        
+        // Fetch full recipe details for each recent watched recipe ID
+        if (recentWatchedIds.length > 0) {
+          const recipePromises = recentWatchedIds.map(async (recipeId) => {
+            try {
+              console.log(`MainPage: Fetching recipe details for ${recipeId}`);
+              const recipeData = await getRecipeInfo(recipeId);
+              return {
+                id: recipeId,
+                ...recipeData
+              };
+            } catch (error) {
+              console.error(`Error fetching watched recipe ${recipeId}:`, error);
+              return null;
+            }
+          });
+          
+          const fetchedRecipes = await Promise.all(recipePromises);
+          lastViewedData = fetchedRecipes.filter(recipe => recipe !== null);
+          console.log('MainPage: Fetched last viewed recipes:', lastViewedData);
+        }
+      } else {
+        console.log('MainPage: No watched recipes found for user');
+        lastViewedData = [];
+      }
+    } catch (err) {
+      console.log('MainPage: Error fetching watched recipes (user might not have any):', err);
+      lastViewedData = [];
+      watchedIds = [];
+    }
+  } else {
+    console.log('MainPage: User not logged in, fetching blurred random recipes...');
+    // User not logged in: fetch 3 more random recipes for blurred section
+    blurredRandomLoading.value = true;
+    try {
+      blurredRandomData = await getRandomRecipes(3);
+      console.log('MainPage: Blurred random recipes:', blurredRandomData);
+    } catch (err) {
+      console.log('Error fetching blurred random recipes');
+      // For blurred recipes, also handle 402 error
+      if (err.response && err.response.status === 402) {
+        console.log('MainPage: 402 error for blurred recipes too');
+      }
+      blurredRandomData = [];
+    } finally {
+      blurredRandomLoading.value = false;
+    }
+  }
+
+  lastViewedRecipes.value = lastViewedData;
+  blurredRandomRecipes.value = blurredRandomData;
+
+  // Cache the data if store supports it
+  if (store.cacheMainPageData) {
+    console.log('MainPage: Caching data...');
+    store.cacheMainPageData(randomData, lastViewedData, blurredRandomData, watchedIds);
+  }
+};
+
+const refreshData = async () => {
+  isRefreshing.value = true;
+  
+  try {
+    // Clear cache before refresh
+    if (store.clearMainPageCache) {
+      store.clearMainPageCache();
+    }
+    
+    await fetchRandomRecipes(true);
+  } catch (error) {
+    console.error('Error refreshing data:', error);
+  } finally {
+    isRefreshing.value = false;
+  }
+};
+
+// Replace the onMounted function with this:
+onMounted(() => {
+  console.log('MainPage: onMounted called');
+  
+  // Check if we have cached data before fetching
+  const cachedData = store.getCachedMainPageData ? store.getCachedMainPageData() : null;
+  
+  // Use sessionStorage to track if this is a real page refresh
+  const pageLoadId = sessionStorage.getItem('mainPageLoadId');
+  const currentLoadId = Date.now().toString();
+  
+  // If no pageLoadId exists, this is likely a fresh browser session/reload
+  const isFirstLoad = !pageLoadId;
+  sessionStorage.setItem('mainPageLoadId', currentLoadId);
+  
+  // Check if referrer is from the same origin (internal navigation)
+  const cameFromApp = document.referrer && 
+                      document.referrer.includes(window.location.origin);
+  
+  console.log('MainPage: Navigation context:', {
+    hasCache: !!cachedData,
+    isFirstLoad,
+    cameFromApp,
+    referrer: document.referrer
+  });
+  
+  // Clear cache only on fresh browser session/actual reload
+  if (isFirstLoad && !cameFromApp) {
+    console.log('MainPage: Fresh browser session detected, clearing cache');
+    if (store.clearMainPageCache) {
+      store.clearMainPageCache();
+    }
+  }
+  
+  // Use cache if available and this is internal navigation
+  const shouldUseCache = cachedData && cameFromApp && !isFirstLoad;
+  
+  if (shouldUseCache) {
+    console.log('MainPage: Using cached data on navigation return');
+    randomRecipes.value = cachedData.randomRecipes;
+    lastViewedRecipes.value = cachedData.lastViewedRecipes || [];
+    blurredRandomRecipes.value = cachedData.blurredRandomRecipes || [];
+    localWatchedRecipeIds.value = cachedData.watchedRecipeIds || [];
+    
+    // ONLY fetch user data (likes/favorites) if logged in - no API calls for recipes
+    if (store.username) {
+      console.log('MainPage: Fetching ONLY user data for cached recipes');
+      fetchUserPreferencesOnly(); // This should only update favorites/likes, not refetch recipes
+    }
+  } else {
+    console.log('MainPage: No cache or fresh session, fetching fresh data');
+    fetchRandomRecipes();
+  }
+});
+
+// Expose method to force refresh (for when recipe is watched)
+const refreshDataFromExternal = () => {
+  refreshData();
+};
+
+defineExpose({ refreshData: refreshDataFromExternal });
 </script>
 
-<style lang="scss" scoped>
-.RandomRecipes {
-  margin: 10px 0 10px;
+<style scoped>
+.container {
+  max-width: 1200px;
 }
 
-.blur {
-  -webkit-filter: blur(5px); 
-  filter: blur(2px);
+h1 {
+  color: #2c3e50;
+  text-align: center;
+}
+
+h2 {
+  color: #34495e;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 0.5rem;
+}
+
+.spinner-border {
+  color: #3498db;
+}
+
+.btn-outline-primary {
+  font-size: 0.875rem;
+}
+
+.fa-sync-alt.fa-spin {
+  animation: fa-spin 1s infinite linear;
+}
+
+/* Blurred recipes section */
+.blurred-recipe-container {
+  filter: blur(4px);
   pointer-events: none;
-  cursor: default;
+  user-select: none;
 }
 
-:deep(.blur) {
-  pointer-events: none !important;
-  cursor: default !important;
+.position-relative {
+  position: relative;
 }
 
-:deep(.blur *) {
-  pointer-events: none !important;
-  cursor: default !important;
+.login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
-:deep(.blur a) {
-  pointer-events: none !important;
-  cursor: default !important;
-  text-decoration: none !important;
+.login-prompt {
+  text-align: center;
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 2px solid #3498db;
 }
 
-.text-center.mb-2.mb-1 {
-  margin-bottom: 0.05rem !important;
+.login-prompt h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.login-prompt p {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  border-color: #3498db;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  border-color: #2980b9;
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .login-prompt {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .login-prompt h4 {
+    font-size: 1.3rem;
+  }
+  
+  .login-prompt p {
+    font-size: 1rem;
+  }
 }
 </style>
