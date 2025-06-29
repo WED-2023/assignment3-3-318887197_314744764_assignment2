@@ -36,7 +36,7 @@
                 @mouseleave="handlePersonalHover(false)"
               >
                 <!-- Only Favorites is functional -->
-                <router-link :to="{ name: 'favorites' }" class="dropdown-item">Favorites ❤️</router-link>
+                <router-link :to="{ name: 'favorites' }" class="dropdown-item">Favorites ⭐</router-link>
                 <router-link :to="{ name: 'personal' }" class="dropdown-item">Private</router-link>
                 <a href="#" @click.prevent class="dropdown-item disabled">La Familia</a>
               </div>

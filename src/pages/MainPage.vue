@@ -126,6 +126,25 @@ const isRefreshing = ref(false);
 // Create local error variable controlled only by MainPage
 const mainPageRandomError = ref('');
 
+// Helper function to compare recipe lists
+const areRecipeListsEqual = (list1, list2) => {
+  if (list1.length !== list2.length) {
+    console.log('MainPage: Recipe lists different length:', list1.length, 'vs', list2.length);
+    return false;
+  }
+  
+  // Compare recipe IDs and order
+  for (let i = 0; i < list1.length; i++) {
+    if (!list1[i] || !list2[i] || list1[i].id !== list2[i].id) {
+      console.log('MainPage: Recipe lists differ at index', i, ':', list1[i]?.id, 'vs', list2[i]?.id);
+      return false;
+    }
+  }
+  
+  console.log('MainPage: Recipe lists are identical');
+  return true;
+};
+
 // Event handlers for updating user data
 const handleFavoriteToggled = (event) => {
   const { recipeId, newState } = event;
@@ -205,7 +224,7 @@ const fetchRandomRecipes = async (forceRefresh = false) => {
       await fetchUserData();
 
       // Use the watched IDs that were already fetched by fetchUserData
-      watchedIds = userWatchedIds.value.map(id => Number(id));
+      watchedIds = userWatchedIds.value.map(id => String(id));
       localWatchedRecipeIds.value = userWatchedIds.value;
       console.log('MainPage: Using watched IDs from UserData:', watchedIds);
 
@@ -232,8 +251,17 @@ const fetchRandomRecipes = async (forceRefresh = false) => {
           });
           
           const fetchedRecipes = await Promise.all(recipePromises);
-          lastViewedData = fetchedRecipes.filter(recipe => recipe !== null);
-          console.log('MainPage: Fetched last viewed recipes:', lastViewedData);
+          const newLastViewedData = fetchedRecipes.filter(recipe => recipe !== null);
+          console.log('MainPage: Fetched last viewed recipes:', newLastViewedData);
+
+          // Only update if the list is different
+          if (!areRecipeListsEqual(lastViewedRecipes.value, newLastViewedData)) {
+            console.log('MainPage: Last viewed list has changed, updating...');
+            lastViewedData = newLastViewedData;
+          } else {
+            console.log('MainPage: Last viewed list unchanged, keeping current data');
+            lastViewedData = lastViewedRecipes.value; // Keep current data
+          }
         }
       } else {
         console.log('MainPage: No watched recipes found for user');
@@ -290,7 +318,6 @@ const refreshData = async () => {
   }
 };
 
-// Replace the onMounted function with this:
 onMounted(() => {
   console.log('MainPage: onMounted called');
   
