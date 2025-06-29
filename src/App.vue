@@ -7,15 +7,18 @@
         <div class="navbar-left">
           <!-- Logo -->
           <div class="navbar-logo">
-            <a href="#" @click.prevent class="logo-link">NavBar</a>
+            <a href="#" @click.prevent class="logo-link">Recipe World</a>
           </div>
           
-          <!-- Menu Items -->
+          <!-- Menu Items - Always visible -->
           <div class="navbar-menu">
             <router-link :to="{ name: 'main' }" class="nav-item">Main</router-link>
+            <router-link :to="{ name: 'about' }" class="nav-item">About</router-link>
             <a href="#" @click.prevent class="nav-item disabled">Search</a>
-            
-            <!-- Personal Dropdown -->
+          </div>
+          
+          <!-- Personal Section - Only for logged in users -->
+          <div v-if="username" class="personal-section">
             <div 
               class="dropdown" 
               @mouseenter="handlePersonalHover(true)" 
@@ -44,8 +47,15 @@
           </div>
         </div>
 
-        <!-- Right Side - ONLY USER CONTROLS -->
+        <!-- Right Side - USER CONTROLS AND GREETING -->
         <div class="navbar-right">
+          <!-- Greeting Section -->
+          <div class="greeting-section">
+            <span class="greeting-text">
+              {{ username ? `Hello, ${username}` : 'Hello Guest' }}
+            </span>
+          </div>
+          
           <!-- User Section -->
           <div v-if="username" class="user-section">
             <div 
@@ -182,8 +192,6 @@ onUnmounted(() => {
 });
 </script>
 
-
-
 <style lang="scss">
 @import "@/scss/form-style.scss";
 
@@ -214,7 +222,6 @@ onUnmounted(() => {
   margin: 0; // Remove auto centering
   padding: 0; // Remove padding to make items flush
 }
-
 
 .navbar-left {
   display: flex;
@@ -249,6 +256,11 @@ onUnmounted(() => {
   display: flex !important;
   align-items: center !important;
   gap: 1.5rem !important;
+}
+
+.personal-section {
+  display: flex !important;
+  align-items: center !important;
 }
 
 .nav-item {

@@ -6,7 +6,18 @@
           <div class="card-body">
             <h2 class="card-title text-center mb-4">Register</h2>
             
+            <!-- Validation summary alert -->
+            <div
+              v-if="showValidationSummary && validationErrors.length"
+              class="alert alert-danger"
+            >
+              <ul class="mb-0">
+                <li v-for="(err, idx) in validationErrors" :key="idx">{{ err }}</li>
+              </ul>
+            </div>
+            
             <form @submit.prevent="handleRegister">
+              <!-- Username -->
               <div class="mb-3">
                 <label for="username" class="form-label">Username</label>
                 <input
@@ -14,15 +25,25 @@
                   class="form-control"
                   id="username"
                   v-model="registerForm.username"
-                  :class="{ 'is-invalid': errors.username }"
+                  :class="getUsernameValidationClass()"
+                  @blur="touchedFields.username = true"
+                  @input="usernameExistsError = ''"
                   required
                 />
-                <div v-if="errors.username" class="invalid-feedback">
-                  {{ errors.username }}
+                <div v-if="getUsernameValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="!registerForm.username && touchedFields.username">Username is required.</div>
+                  <div v-else-if="registerForm.username && registerForm.username.length < 3">Username is too short (min 3).</div>
+                  <div v-else-if="registerForm.username && registerForm.username.length > 8">Username is too long (max 8).</div>
+                  <div v-else-if="registerForm.username && !/^[a-zA-Z]+$/.test(registerForm.username)">Username must contain only letters.</div>
+                  <div v-else-if="usernameExistsError">{{ usernameExistsError }}</div>
+                </div>
+                <div v-if="getUsernameValidationClass().includes('is-valid')" class="valid-feedback">
+                  Username looks good!
                 </div>
               </div>
               
               <div class="row">
+                <!-- First Name -->
                 <div class="col-md-6 mb-3">
                   <label for="firstname" class="form-label">First Name</label>
                   <input
@@ -30,14 +51,20 @@
                     class="form-control"
                     id="firstname"
                     v-model="registerForm.firstname"
-                    :class="{ 'is-invalid': errors.firstname }"
+                    :class="getFirstnameValidationClass()"
+                    @blur="touchedFields.firstname = true"
                     required
                   />
-                  <div v-if="errors.firstname" class="invalid-feedback">
-                    {{ errors.firstname }}
+                  <div v-if="getFirstnameValidationClass().includes('is-invalid')" class="invalid-feedback">
+                    <div v-if="!registerForm.firstname && touchedFields.firstname">First name is required.</div>
+                    <div v-else-if="registerForm.firstname && !/^[a-zA-Z\s]+$/.test(registerForm.firstname)">First name must contain only letters.</div>
+                  </div>
+                  <div v-if="getFirstnameValidationClass().includes('is-valid')" class="valid-feedback">
+                    Looks good!
                   </div>
                 </div>
                 
+                <!-- Last Name -->
                 <div class="col-md-6 mb-3">
                   <label for="lastname" class="form-label">Last Name</label>
                   <input
@@ -45,15 +72,21 @@
                     class="form-control"
                     id="lastname"
                     v-model="registerForm.lastname"
-                    :class="{ 'is-invalid': errors.lastname }"
+                    :class="getLastnameValidationClass()"
+                    @blur="touchedFields.lastname = true"
                     required
                   />
-                  <div v-if="errors.lastname" class="invalid-feedback">
-                    {{ errors.lastname }}
+                  <div v-if="getLastnameValidationClass().includes('is-invalid')" class="invalid-feedback">
+                    <div v-if="!registerForm.lastname && touchedFields.lastname">Last name is required.</div>
+                    <div v-else-if="registerForm.lastname && !/^[a-zA-Z\s]+$/.test(registerForm.lastname)">Last name must contain only letters.</div>
+                  </div>
+                  <div v-if="getLastnameValidationClass().includes('is-valid')" class="valid-feedback">
+                    Looks good!
                   </div>
                 </div>
               </div>
               
+              <!-- Email -->
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input
@@ -61,42 +94,103 @@
                   class="form-control"
                   id="email"
                   v-model="registerForm.email"
-                  :class="{ 'is-invalid': errors.email }"
+                  :class="getEmailValidationClass()"
+                  @blur="touchedFields.email = true"
                   required
                 />
-                <div v-if="errors.email" class="invalid-feedback">
-                  {{ errors.email }}
+                <div v-if="getEmailValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="!registerForm.email && touchedFields.email">Email is required.</div>
+                  <div v-else-if="registerForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)">Please enter a valid email address.</div>
+                </div>
+                <div v-if="getEmailValidationClass().includes('is-valid')" class="valid-feedback">
+                  Email looks good!
                 </div>
               </div>
               
+              <!-- Country -->
               <div class="mb-3">
                 <label for="country" class="form-label">Country</label>
-                <input
-                  type="text"
-                  class="form-control"
+                <select
+                  class="form-select"
                   id="country"
                   v-model="registerForm.country"
-                  :class="{ 'is-invalid': errors.country }"
+                  :class="getCountryValidationClass()"
+                  @change="touchedFields.country = true"
                   required
-                />
-                <div v-if="errors.country" class="invalid-feedback">
-                  {{ errors.country }}
+                >
+                  <option value="">Select a country</option>
+                  <option v-for="country in countries" :key="country" :value="country">
+                    {{ country }}
+                  </option>
+                </select>
+                <div v-if="getCountryValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="!registerForm.country && touchedFields.country">Country is required.</div>
+                </div>
+                <div v-if="getCountryValidationClass().includes('is-valid')" class="valid-feedback">
+                  Country selected!
                 </div>
               </div>
               
+              <!-- Password -->
               <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
-                <input
-                  type="password"
-                  class="form-control"
-                  id="password"
-                  v-model="registerForm.password"
-                  :class="{ 'is-invalid': errors.password }"
-                  required
-                />
+                <div class="input-group">
+                  <input
+                    :type="showPassword ? 'text' : 'password'"
+                    class="form-control"
+                    id="password"
+                    v-model="registerForm.password"
+                    :class="getPasswordValidationClass()"
+                    @blur="touchedFields.password = true"
+                    required
+                  />
+                  <button
+                    class="btn btn-outline-secondary"
+                    type="button"
+                    @click="showPassword = !showPassword"
+                  >
+                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
+                </div>
                 <div class="form-text">Must be 5-10 characters with at least one number and one special character</div>
-                <div v-if="errors.password" class="invalid-feedback">
-                  {{ errors.password }}
+                <div v-if="getPasswordValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="!registerForm.password && touchedFields.password">Password is required.</div>
+                  <div v-else-if="registerForm.password && (registerForm.password.length < 5 || registerForm.password.length > 10)">Password must be 5-10 characters.</div>
+                  <div v-else-if="registerForm.password && !/(?=.*[0-9])/.test(registerForm.password)">Password must contain at least one number.</div>
+                  <div v-else-if="registerForm.password && !/(?=.*[^a-zA-Z0-9])/.test(registerForm.password)">Password must contain at least one special character.</div>
+                </div>
+                <div v-if="getPasswordValidationClass().includes('is-valid')" class="valid-feedback">
+                  Strong password!
+                </div>
+              </div>
+
+              <!-- Confirm Password -->
+              <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <div class="input-group">
+                  <input
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    class="form-control"
+                    id="confirmPassword"
+                    v-model="registerForm.confirmPassword"
+                    :class="getConfirmPasswordValidationClass()"
+                    @blur="touchedFields.confirmPassword = true"
+                    required
+                  />
+                  <button
+                    class="btn btn-outline-secondary"
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                  >
+                    <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
+                </div>
+                <div v-if="getConfirmPasswordValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="!registerForm.confirmPassword && touchedFields.confirmPassword">Confirmation is required.</div>
+                  <div v-else-if="registerForm.confirmPassword && registerForm.confirmPassword !== registerForm.password">Passwords do not match.</div>
+                </div>
+                <div v-if="getConfirmPasswordValidationClass().includes('is-valid')" class="valid-feedback">
+                  Passwords match!
                 </div>
               </div>
               
@@ -125,14 +219,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { AuthAPI } from '@/composables/AuthAPI';
+import rawCountries from '@/assets/countries';
 
 const router = useRouter();
 
 // Use composables
 const { register, isLoading: authLoading, error: authError } = AuthAPI();
+
+// Countries list
+const countries = rawCountries.map(c => c.name.common).sort((a, b) => a.localeCompare(b));
 
 // Reactive data
 const registerForm = reactive({
@@ -141,72 +239,192 @@ const registerForm = reactive({
   lastname: '',
   email: '',
   country: '',
-  password: ''
+  password: '',
+  confirmPassword: ''
 });
 
-const errors = ref({});
+const touchedFields = reactive({
+  username: false,
+  firstname: false,
+  lastname: false,
+  email: false,
+  country: false,
+  password: false,
+  confirmPassword: false
+});
+
+const usernameExistsError = ref('');
 const successMessage = ref('');
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+const showValidationSummary = ref(false);
+
+// Validation helper functions
+const isUsernameValid = () => {
+  return registerForm.username && 
+         registerForm.username.length >= 3 && 
+         registerForm.username.length <= 8 && 
+         /^[a-zA-Z]+$/.test(registerForm.username) &&
+         !usernameExistsError.value;
+};
+
+const isFirstnameValid = () => {
+  return registerForm.firstname && /^[a-zA-Z\s]+$/.test(registerForm.firstname);
+};
+
+const isLastnameValid = () => {
+  return registerForm.lastname && /^[a-zA-Z\s]+$/.test(registerForm.lastname);
+};
+
+const isEmailValid = () => {
+  return registerForm.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email);
+};
+
+const isCountryValid = () => {
+  return registerForm.country && registerForm.country !== '';
+};
+
+const isPasswordValid = () => {
+  return registerForm.password && 
+         registerForm.password.length >= 5 && 
+         registerForm.password.length <= 10 &&
+         /(?=.*[0-9])/.test(registerForm.password) &&
+         /(?=.*[^a-zA-Z0-9])/.test(registerForm.password);
+};
+
+const isConfirmPasswordValid = () => {
+  return registerForm.confirmPassword && registerForm.confirmPassword === registerForm.password;
+};
+
+// Validation class functions
+const getUsernameValidationClass = () => {
+  if (!touchedFields.username && !registerForm.username) return '';
+  if (usernameExistsError.value) return 'is-invalid';
+  if (touchedFields.username || registerForm.username) {
+    return isUsernameValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getFirstnameValidationClass = () => {
+  if (!touchedFields.firstname && !registerForm.firstname) return '';
+  if (touchedFields.firstname || registerForm.firstname) {
+    return isFirstnameValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getLastnameValidationClass = () => {
+  if (!touchedFields.lastname && !registerForm.lastname) return '';
+  if (touchedFields.lastname || registerForm.lastname) {
+    return isLastnameValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getEmailValidationClass = () => {
+  if (!touchedFields.email && !registerForm.email) return '';
+  if (touchedFields.email || registerForm.email) {
+    return isEmailValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getCountryValidationClass = () => {
+  if (!touchedFields.country && !registerForm.country) return '';
+  if (touchedFields.country || registerForm.country) {
+    return isCountryValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getPasswordValidationClass = () => {
+  if (!touchedFields.password && !registerForm.password) return '';
+  if (touchedFields.password || registerForm.password) {
+    return isPasswordValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getConfirmPasswordValidationClass = () => {
+  if (!touchedFields.confirmPassword && !registerForm.confirmPassword) return '';
+  if (touchedFields.confirmPassword || registerForm.confirmPassword) {
+    return isConfirmPasswordValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+// Computed validation errors for summary
+const validationErrors = computed(() => {
+  const errors = [];
+  
+  if (touchedFields.username || registerForm.username) {
+    if (!registerForm.username) errors.push('Username is required.');
+    else if (registerForm.username.length < 3) errors.push('Username is too short (min 3).');
+    else if (registerForm.username.length > 8) errors.push('Username is too long (max 8).');
+    else if (!/^[a-zA-Z]+$/.test(registerForm.username)) errors.push('Username must contain only letters.');
+  }
+  
+  if (touchedFields.firstname || registerForm.firstname) {
+    if (!registerForm.firstname) errors.push('First name is required.');
+    else if (!/^[a-zA-Z\s]+$/.test(registerForm.firstname)) errors.push('First name must contain only letters.');
+  }
+  
+  if (touchedFields.lastname || registerForm.lastname) {
+    if (!registerForm.lastname) errors.push('Last name is required.');
+    else if (!/^[a-zA-Z\s]+$/.test(registerForm.lastname)) errors.push('Last name must contain only letters.');
+  }
+  
+  if (touchedFields.email || registerForm.email) {
+    if (!registerForm.email) errors.push('Email is required.');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) errors.push('Email must be valid.');
+  }
+  
+  if (touchedFields.country || registerForm.country) {
+    if (!registerForm.country) errors.push('Country is required.');
+  }
+  
+  if (touchedFields.password || registerForm.password) {
+    if (!registerForm.password) errors.push('Password is required.');
+    else if (registerForm.password.length < 5 || registerForm.password.length > 10) errors.push('Password must be 5-10 characters.');
+    else if (!/(?=.*[0-9])/.test(registerForm.password)) errors.push('Password must contain at least one number.');
+    else if (!/(?=.*[^a-zA-Z0-9])/.test(registerForm.password)) errors.push('Password must contain at least one special character.');
+  }
+  
+  if (touchedFields.confirmPassword || registerForm.confirmPassword) {
+    if (!registerForm.confirmPassword) errors.push('Confirm password is required.');
+    else if (registerForm.confirmPassword !== registerForm.password) errors.push('Passwords do not match.');
+  }
+  
+  return errors;
+});
 
 const validateForm = () => {
-  errors.value = {};
+  // Touch all fields to trigger validation display
+  Object.keys(touchedFields).forEach(key => {
+    touchedFields[key] = true;
+  });
   
-  // Username validation
-  if (!registerForm.username) {
-    errors.value.username = 'Username is required';
-  } else if (registerForm.username.length < 3 || registerForm.username.length > 8) {
-    errors.value.username = 'Username must be 3-8 characters';
-  } else if (!/^[a-zA-Z]+$/.test(registerForm.username)) {
-    errors.value.username = 'Username must contain only letters';
-  }
-  
-  // First name validation
-  if (!registerForm.firstname) {
-    errors.value.firstname = 'First name is required';
-  } else if (registerForm.firstname.length > 100) {
-    errors.value.firstname = 'First name must be less than 100 characters';
-  }
-  
-  // Last name validation
-  if (!registerForm.lastname) {
-    errors.value.lastname = 'Last name is required';
-  } else if (registerForm.lastname.length > 100) {
-    errors.value.lastname = 'Last name must be less than 100 characters';
-  }
-  
-  // Email validation
-  if (!registerForm.email) {
-    errors.value.email = 'Email is required';
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) {
-    errors.value.email = 'Please enter a valid email address';
-  } else if (registerForm.email.length > 255) {
-    errors.value.email = 'Email must be less than 255 characters';
-  }
-  
-  // Country validation
-  if (!registerForm.country) {
-    errors.value.country = 'Country is required';
-  } else if (registerForm.country.length > 100) {
-    errors.value.country = 'Country must be less than 100 characters';
-  }
-  
-  // Password validation
-  if (!registerForm.password) {
-    errors.value.password = 'Password is required';
-  } else if (registerForm.password.length < 5 || registerForm.password.length > 10) {
-    errors.value.password = 'Password must be 5-10 characters';
-  } else if (!/(?=.*[0-9])(?=.*[^a-zA-Z0-9])/.test(registerForm.password)) {
-    errors.value.password = 'Password must contain at least one number and one special character';
-  }
-  
-  return Object.keys(errors.value).length === 0;
+  return isUsernameValid() && 
+         isFirstnameValid() && 
+         isLastnameValid() && 
+         isEmailValid() && 
+         isCountryValid() && 
+         isPasswordValid() && 
+         isConfirmPasswordValid() &&
+         !usernameExistsError.value;
 };
 
 const handleRegister = async () => {
   successMessage.value = '';
+  usernameExistsError.value = '';
   
   if (!validateForm()) {
+    showValidationSummary.value = true;
     return;
   }
+
+  showValidationSummary.value = false;
 
   try {
     // Use composable to register
@@ -225,6 +443,9 @@ const handleRegister = async () => {
     Object.keys(registerForm).forEach(key => {
       registerForm[key] = '';
     });
+    Object.keys(touchedFields).forEach(key => {
+      touchedFields[key] = false;
+    });
     
     // Redirect to login after 2 seconds
     setTimeout(() => {
@@ -234,7 +455,8 @@ const handleRegister = async () => {
   } catch (err) {
     console.error('Registration failed:', err);
     if (err.response?.status === 409) {
-      errors.value.username = 'Username already taken';
+      usernameExistsError.value = 'Username already exists. Please choose a different username.';
+      touchedFields.username = true;
     }
   }
 };
@@ -278,5 +500,15 @@ a:hover {
 .form-text {
   font-size: 0.875rem;
   color: #6c757d;
+}
+
+.input-group .btn {
+  border-left: 0;
+}
+
+.form-control:focus + .btn,
+.form-control.is-valid + .btn,
+.form-control.is-invalid + .btn {
+  border-color: inherit;
 }
 </style>

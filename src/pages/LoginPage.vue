@@ -7,6 +7,7 @@
             <h2 class="card-title text-center mb-4">Login</h2>
             
             <form @submit.prevent="handleLogin">
+              <!-- Username -->
               <div class="mb-3">
                 <label for="username" class="form-label">Username</label>
                 <input
@@ -14,26 +15,51 @@
                   class="form-control"
                   id="username"
                   v-model="loginForm.username"
-                  :class="{ 'is-invalid': errors.username }"
+                  :class="getUsernameValidationClass()"
+                  @blur="touchedFields.username = true"
+                  @input="clearLoginError"
                   required
                 />
-                <div v-if="errors.username" class="invalid-feedback">
-                  {{ errors.username }}
+                <div v-if="getUsernameValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="loginError">{{ loginError }}</div>
+                  <div v-else-if="!loginForm.username && touchedFields.username">Username is required.</div>
+                  <div v-else-if="loginForm.username && (loginForm.username.length < 3 || loginForm.username.length > 8)">Username must be 3-8 characters.</div>
+                  <div v-else-if="loginForm.username && !/^[a-zA-Z]+$/.test(loginForm.username)">Username must contain only letters.</div>
+                </div>
+                <div v-if="getUsernameValidationClass().includes('is-valid')" class="valid-feedback">
+                  Username looks good!
                 </div>
               </div>
               
+              <!-- Password -->
               <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
-                <input
-                  type="password"
-                  class="form-control"
-                  id="password"
-                  v-model="loginForm.password"
-                  :class="{ 'is-invalid': errors.password }"
-                  required
-                />
-                <div v-if="errors.password" class="invalid-feedback">
-                  {{ errors.password }}
+                <div class="input-group">
+                  <input
+                    :type="showPassword ? 'text' : 'password'"
+                    class="form-control"
+                    id="password"
+                    v-model="loginForm.password"
+                    :class="getPasswordValidationClass()"
+                    @blur="touchedFields.password = true"
+                    @input="clearLoginError"
+                    required
+                  />
+                  <button
+                    class="btn btn-outline-secondary"
+                    type="button"
+                    @click="showPassword = !showPassword"
+                  >
+                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
+                </div>
+                <div v-if="getPasswordValidationClass().includes('is-invalid')" class="invalid-feedback">
+                  <div v-if="loginError">{{ loginError }}</div>
+                  <div v-else-if="!loginForm.password && touchedFields.password">Password is required.</div>
+                  <div v-else-if="loginForm.password && (loginForm.password.length < 5 || loginForm.password.length > 10)">Password must be 5-10 characters.</div>
+                </div>
+                <div v-if="getPasswordValidationClass().includes('is-valid')" class="valid-feedback">
+                  Password format is correct!
                 </div>
               </div>
               
@@ -41,7 +67,7 @@
                 {{ authError }}
               </div>
               
-              <button type="submit" class="btn btn-primary w-100" :disabled="authLoading">
+              <button type="submit" class="btn btn-primary w-100" :disabled="authLoading || !isFormValid">
                 <span v-if="authLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
                 {{ authLoading ? 'Logging in...' : 'Login' }}
               </button>
@@ -58,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import store from '@/store';
 import { AuthAPI } from '@/composables/AuthAPI';
@@ -74,29 +100,74 @@ const loginForm = reactive({
   password: ''
 });
 
-const errors = ref({});
+const touchedFields = reactive({
+  username: false,
+  password: false
+});
+
+const showPassword = ref(false);
+const loginError = ref('');
+
+// Validation helper functions
+const isUsernameValid = () => {
+  return loginForm.username && 
+         loginForm.username.length >= 3 && 
+         loginForm.username.length <= 8 && 
+         /^[a-zA-Z]+$/.test(loginForm.username);
+};
+
+const isPasswordValid = () => {
+  return loginForm.password && 
+         loginForm.password.length >= 5 && 
+         loginForm.password.length <= 10;
+};
+
+// Validation class functions
+const getUsernameValidationClass = () => {
+  if (!touchedFields.username && !loginForm.username) return '';
+  
+  // If there's a login error, mark as invalid
+  if (loginError.value) return 'is-invalid';
+  
+  if (touchedFields.username || loginForm.username) {
+    return isUsernameValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+const getPasswordValidationClass = () => {
+  if (!touchedFields.password && !loginForm.password) return '';
+  
+  // If there's a login error, mark as invalid
+  if (loginError.value) return 'is-invalid';
+  
+  if (touchedFields.password || loginForm.password) {
+    return isPasswordValid() ? 'is-valid' : 'is-invalid';
+  }
+  return '';
+};
+
+// Computed properties
+const isFormValid = computed(() => {
+  return isUsernameValid() && isPasswordValid() && !loginError.value;
+});
+
+// Methods
+const clearLoginError = () => {
+  loginError.value = '';
+};
 
 const validateForm = () => {
-  errors.value = {};
+  // Touch all fields to trigger validation display
+  touchedFields.username = true;
+  touchedFields.password = true;
   
-  if (!loginForm.username) {
-    errors.value.username = 'Username is required';
-  } else if (loginForm.username.length < 3 || loginForm.username.length > 8) {
-    errors.value.username = 'Username must be 3-8 characters';
-  } else if (!/^[a-zA-Z]+$/.test(loginForm.username)) {
-    errors.value.username = 'Username must contain only letters';
-  }
-  
-  if (!loginForm.password) {
-    errors.value.password = 'Password is required';
-  } else if (loginForm.password.length < 5 || loginForm.password.length > 10) {
-    errors.value.password = 'Password must be 5-10 characters';
-  }
-  
-  return Object.keys(errors.value).length === 0;
+  return isUsernameValid() && isPasswordValid();
 };
 
 const handleLogin = async () => {
+  loginError.value = '';
+  
   if (!validateForm()) {
     return;
   }
@@ -116,9 +187,11 @@ const handleLogin = async () => {
     
   } catch (err) {
     console.error('Login failed:', err);
-    if (err.response?.status === 401) {
-      errors.value.password = 'Invalid username or password';
-    }
+    
+    // Set login error and mark both fields as touched to show red state
+    loginError.value = 'Username or password incorrect';
+    touchedFields.username = true;
+    touchedFields.password = true;
   }
 };
 </script>
@@ -144,9 +217,14 @@ const handleLogin = async () => {
   font-weight: 500;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: #2980b9;
   border-color: #2980b9;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 a {
@@ -156,5 +234,15 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+.input-group .btn {
+  border-left: 0;
+}
+
+.form-control:focus + .btn,
+.form-control.is-valid + .btn,
+.form-control.is-invalid + .btn {
+  border-color: inherit;
 }
 </style>
