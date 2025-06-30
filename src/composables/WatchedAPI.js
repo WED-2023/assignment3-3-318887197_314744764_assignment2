@@ -33,7 +33,7 @@ export function WatchedAPI() {
       // Return the last 'count' items (most recently added)
       // Note: This assumes the API returns them in chronological order
       // If not, you might need to reverse the array first
-      return allWatched.slice(-count).reverse();
+      return allWatched.slice(0, count);
     } catch (err) {
       console.error('WatchedAPI: getRecentWatched error:', err);
       throw err;

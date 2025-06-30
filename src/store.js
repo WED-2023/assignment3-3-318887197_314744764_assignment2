@@ -8,7 +8,7 @@ const store = reactive({
   // Add caching properties
   mainPageCache: null,
   cacheTimestamp: null,
-  cacheExpiration: 5 * 60 * 1000, // 5 minutes in milliseconds
+  cacheExpiration: 30 * 60 * 1000, // 5 minutes in milliseconds
 
   addLastViewedRecipe(recipe) {
     // Remove if already exists to avoid duplicates
