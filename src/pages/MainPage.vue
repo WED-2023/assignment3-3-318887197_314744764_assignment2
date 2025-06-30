@@ -174,6 +174,21 @@ const handleLikeToggled = (event) => {
     // Remove from likes
     likedRecipeIds.value = likedRecipeIds.value.filter(id => id !== String(recipeId));
   }
+
+    const updateLikes = (recipes) => {
+    const recipe = recipes.find(r => String(r.id) === String(recipeId));
+    if (recipe) {
+      if (typeof recipe.aggregateLikes === 'number') {
+        recipe.aggregateLikes += newState ? 1 : -1;
+        // Prevent negative likes
+        if (recipe.aggregateLikes < 0) recipe.aggregateLikes = 0;
+      }
+    }
+  };
+
+  // Update in both lists if present
+  updateLikes(randomRecipes.value);
+  updateLikes(lastViewedRecipes.value);
 };
 
 const fetchRandomRecipes = async (forceRefresh = false) => {
