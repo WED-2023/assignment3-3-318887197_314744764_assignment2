@@ -14,7 +14,7 @@
           <div class="navbar-menu">
             <router-link :to="{ name: 'main' }" class="nav-item">Main</router-link>
             <router-link :to="{ name: 'about' }" class="nav-item">About</router-link>
-            <a href="#" @click.prevent class="nav-item disabled">Search</a>
+            <router-link :to="{ name: 'search' }" class="nav-item">Search</router-link>
           </div>
           
           <!-- Personal Section - Only for logged in users -->
@@ -49,10 +49,10 @@
 
         <!-- Right Side - USER CONTROLS AND GREETING -->
         <div class="navbar-right">
-          <!-- Greeting Section -->
-          <div class="greeting-section">
+          <!-- Greeting Section: show only for guests -->
+          <div class="greeting-section" v-if="!username">
             <span class="greeting-text">
-              {{ username ? `Hello, ${username}` : 'Hello Guest' }}
+              Hello Guest
             </span>
           </div>
           

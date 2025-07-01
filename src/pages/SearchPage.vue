@@ -19,30 +19,20 @@
             </div>
             <div class="col-md-6 mb-3">
               <label for="cuisine" class="form-label">Cuisine</label>
-              <select class="form-select" id="cuisine" v-model="searchForm.cuisine">
-                <option value="">Any Cuisine</option>
-                <option value="Italian">Italian</option>
-                <option value="Mexican">Mexican</option>
-                <option value="Asian">Asian</option>
-                <option value="American">American</option>
-                <option value="French">French</option>
-                <option value="Indian">Indian</option>
-              </select>
+                <select class="form-select" id="cuisine" v-model="searchForm.cuisine">
+                  <option value="">Any Cuisine</option>
+                  <option v-for="cuisine in cuisines" :key="cuisine" :value="cuisine">{{ cuisine }}</option>
+                </select>
             </div>
           </div>
           
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="diet" class="form-label">Diet</label>
-              <select class="form-select" id="diet" v-model="searchForm.diet">
-                <option value="">Any Diet</option>
-                <option value="Vegan">Vegan</option>
-                <option value="Vegetarian">Vegetarian</option>
-                <option value="Gluten Free">Gluten Free</option>
-                <option value="Ketogenic">Ketogenic</option>
-                <option value="Pescetarian">Pescetarian</option>
-                <option value="Paleo">Paleo</option>
-              </select>
+                <select class="form-select" id="diet" v-model="searchForm.diet">
+                  <option value="">Any Diet</option>
+                  <option v-for="diet in diets" :key="diet" :value="diet">{{ diet }}</option>
+                </select>
             </div>
             <div class="col-md-6 mb-3">
               <label for="amount" class="form-label">Number of Results</label>
@@ -55,23 +45,20 @@
           </div>
           
           <div class="mb-3">
-            <label class="form-label">Intolerances</label>
-            <div class="row">
-              <div class="col-md-3" v-for="intolerance in availableIntolerances" :key="intolerance">
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    :id="intolerance"
-                    :value="intolerance"
-                    v-model="searchForm.intolerances"
-                  />
-                  <label class="form-check-label" :for="intolerance">
-                    {{ intolerance }}
-                  </label>
-                </div>
-              </div>
-            </div>
+            <label for="intolerances" class="form-label">Intolerances</label>
+            <Multiselect
+              id="intolerances"
+              v-model="searchForm.intolerances"
+              :options="availableIntolerances"
+              :multiple="true"
+              :close-on-select="false"
+              :clear-on-select="false"
+              :preserve-search="true"
+              placeholder="Select intolerances"
+              label=""
+              track-by=""
+              class="w-100"
+            />
           </div>
           
           <button type="submit" class="btn btn-primary" :disabled="searchLoading">
@@ -104,6 +91,11 @@
 </template>
 
 <script setup>
+import Multiselect from 'vue-multiselect'
+import 'vue-multiselect/dist/vue-multiselect.min.css'
+import { diets } from '@/assets/diets';
+import { cuisines } from '@/assets/cuisines';
+import { intolerances as availableIntolerances } from '@/assets/intolerances';
 import { ref, reactive } from 'vue';
 import { RecipeAPI } from '@/composables/RecipeAPI';
 import RecipePreview from '@/components/RecipePreview.vue';
@@ -122,10 +114,6 @@ const searchForm = reactive({
   intolerances: [],
   amount: 5
 });
-
-const availableIntolerances = [
-  'Dairy', 'Egg', 'Gluten', 'Grain', 'Peanut', 'Seafood', 'Sesame', 'Shellfish', 'Soy', 'Sulfite', 'Tree Nut', 'Wheat'
-];
 
 const handleSearch = async () => {
   hasSearched.value = true;
