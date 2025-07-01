@@ -8,7 +8,10 @@ const store = reactive({
   // Add caching properties
   mainPageCache: null,
   cacheTimestamp: null,
-  cacheExpiration: 30 * 60 * 1000, // 5 minutes in milliseconds
+  cacheExpiration: 5 * 60 * 1000, // 5 minutes in milliseconds
+  searchCache: null,
+  searchCacheTimestamp: null,
+  searchCacheParams: null,
 
   addLastViewedRecipe(recipe) {
     // Remove if already exists to avoid duplicates
@@ -71,7 +74,48 @@ const store = reactive({
     
     const now = Date.now();
     return (now - this.cacheTimestamp) <= this.cacheExpiration;
-  }
+  },
+
+  getCachedSearchData() {
+    if (this.searchCache && this.searchCacheTimestamp) {
+      console.log('Store: Returning cached search data');
+      return {
+        results: this.searchCache,
+        params: this.searchCacheParams,
+        timestamp: this.searchCacheTimestamp
+      };
+    }
+    
+    console.log('Store: No valid search cache found');
+    return null;
+  },
+
+  cacheSearchData(searchResults, searchParams) {
+    console.log('Store: Caching search data');
+    this.searchCache = searchResults || [];
+    this.searchCacheParams = searchParams || {};
+    this.searchCacheTimestamp = Date.now();
+  },
+
+  clearSearchCache() {
+    console.log('Store: Clearing search cache');
+    this.searchCache = null;
+    this.searchCacheTimestamp = null;
+    this.searchCacheParams = null;
+  },
+
+  invalidateSearchCache() {
+    console.log('Store: Invalidating search cache (user action)');
+    this.clearSearchCache();
+  },
+
+  logout() {
+  console.log('Store: User logging out, clearing all data');
+  this.username = null;
+  this.lastViewedRecipes = [];
+  this.clearMainPageCache();
+  this.clearSearchCache();
+  },
 });
 
 export default store;

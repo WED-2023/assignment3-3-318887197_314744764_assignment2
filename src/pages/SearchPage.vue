@@ -96,9 +96,10 @@ import 'vue-multiselect/dist/vue-multiselect.min.css'
 import { diets } from '@/assets/diets';
 import { cuisines } from '@/assets/cuisines';
 import { intolerances as availableIntolerances } from '@/assets/intolerances';
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue'; // Add onMounted
 import { RecipeAPI } from '@/composables/RecipeAPI';
 import RecipePreview from '@/components/RecipePreview.vue';
+import store from '@/store';
 
 // Use composables
 const { searchRecipes, getRecipeInfo, isLoading: searchLoading, error: searchError } = RecipeAPI();
@@ -114,6 +115,29 @@ const searchForm = reactive({
   intolerances: [],
   amount: 5
 });
+
+// Helper function to compare search parameters
+const areSearchParamsEqual = (params1, params2) => {
+  if (!params1 || !params2) return false;
+  
+  const keys1 = Object.keys(params1).sort();
+  const keys2 = Object.keys(params2).sort();
+  
+  if (keys1.length !== keys2.length) return false;
+  
+  for (let key of keys1) {
+    if (key === 'intolerances') {
+      // Compare arrays
+      if (JSON.stringify(params1[key]?.sort()) !== JSON.stringify(params2[key]?.sort())) {
+        return false;
+      }
+    } else {
+      if (params1[key] !== params2[key]) return false;
+    }
+  }
+  
+  return true;
+};
 
 const handleSearch = async () => {
   hasSearched.value = true;
@@ -135,6 +159,14 @@ const handleSearch = async () => {
       }
     });
 
+    // Check if we have cached results for the same search parameters
+    const cachedSearch = store.getCachedSearchData();
+    if (cachedSearch && areSearchParamsEqual(cachedSearch.params, searchParams)) {
+      console.log('SearchPage: Using cached search results');
+      searchResults.value = cachedSearch.results;
+      return;
+    }
+
     // Use composable to search for recipe IDs
     const recipeIds = await searchRecipes(searchParams);
 
@@ -154,9 +186,16 @@ const handleSearch = async () => {
       });
       
       const fetchedRecipes = await Promise.all(recipePromises);
-      searchResults.value = fetchedRecipes.filter(recipe => recipe !== null);
+      const filteredResults = fetchedRecipes.filter(recipe => recipe !== null);
+      
+      searchResults.value = filteredResults;
+      
+      // Cache the search results
+      store.cacheSearchData(filteredResults, searchParams);
     } else {
       searchResults.value = [];
+      // Cache empty results too
+      store.cacheSearchData([], searchParams);
     }
 
   } catch (err) {
@@ -164,7 +203,40 @@ const handleSearch = async () => {
     searchResults.value = [];
   }
 };
+
+// Load cached search on mount
+onMounted(() => {
+  console.log('SearchPage: onMounted called');
+  
+  // Check if referrer is from the same origin (internal navigation)
+  const cameFromApp = document.referrer && 
+                      document.referrer.includes(window.location.origin);
+  
+  console.log('SearchPage: Navigation context:', {
+    cameFromApp,
+    referrer: document.referrer
+  });
+  
+  // Load cached search if available
+  const cachedSearch = store.getCachedSearchData();
+  if (cachedSearch) {
+    console.log('SearchPage: Loading cached search results');
+    searchResults.value = cachedSearch.results;
+    hasSearched.value = true;
+    
+    // Restore search form from cached params
+    if (cachedSearch.params) {
+      searchForm.title = cachedSearch.params.title || '';
+      searchForm.cuisine = cachedSearch.params.cuisine || '';
+      searchForm.diet = cachedSearch.params.diet || '';
+      searchForm.intolerances = cachedSearch.params.intolerances || [];
+      searchForm.amount = cachedSearch.params.amount || 5;
+    }
+  }
+});
 </script>
+
+
 
 <style scoped>
 .container {
