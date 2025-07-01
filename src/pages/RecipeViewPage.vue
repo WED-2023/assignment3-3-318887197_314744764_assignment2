@@ -299,6 +299,18 @@ export default {
         const success = await this.toggleLiked(recipeId, this.isLiked);
         if (success) {
           this.isLiked = !this.isLiked;
+
+          if (this.isLiked) {
+            // User just liked the recipe
+            this.recipe.aggregateLikes += 1;
+          } else {
+            // User just unliked the recipe
+            this.recipe.aggregateLikes -= 1;
+            // Prevent negative likes
+            if (this.recipe.aggregateLikes < 0) {
+              this.recipe.aggregateLikes = 0;
+            }
+          }
           console.log('RecipeViewPage: Like toggled successfully. New state:', this.isLiked);
         } else {
           console.error('RecipeViewPage: toggleLiked returned false');

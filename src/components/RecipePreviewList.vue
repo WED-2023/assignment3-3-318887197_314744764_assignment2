@@ -8,6 +8,9 @@
           :recipe="r" 
           :isWatched="watchedRecipeIds.includes(r.id)"
           :likedRecipeIds="likedRecipeIds"
+          :favoriteRecipeIds="favoriteRecipeIds"
+          @favoriteToggled="$emit('favoriteToggled', $event)"
+          @likeToggled="$emit('likeToggled', $event)"
         />
       </div>
     </div>
@@ -44,9 +47,15 @@ export default {
     likedRecipeIds: {
       type: Array,
       default: () => []
+    },
+    favoriteRecipeIds: { 
+      type: Array,
+      default: () => []
     }
-  }
+  },
+  emits: ['favoriteToggled', 'likeToggled']
 };
+
 </script>
 
 <style scoped>

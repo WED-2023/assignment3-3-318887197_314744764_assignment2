@@ -34,6 +34,9 @@
           :recipes="recipes"
           :watchedRecipeIds="watchedRecipeIds"
           :likedRecipeIds="likedRecipeIds"
+          :favoriteRecipeIds="favoriteRecipeIds"
+          @favoriteToggled="handleFavoriteToggled"
+          @likeToggled="handleLikeToggled"
           class="recipe-list"
         />
       </div>
@@ -71,6 +74,10 @@ defineProps({
     type: Array,
     default: () => []
   },
+  favoriteRecipeIds: {
+    type: Array,
+    default: () => []
+  },
   isLoading: {
     type: Boolean,
     default: false
@@ -92,6 +99,17 @@ defineProps({
     default: null
   }
 });
+
+const emit = defineEmits(['favoriteToggled', 'likeToggled']);
+
+// Event handlers
+const handleFavoriteToggled = (event) => {
+  emit('favoriteToggled', event);
+};
+
+const handleLikeToggled = (event) => {
+  emit('likeToggled', event);
+};
 </script>
 
 <style scoped>
