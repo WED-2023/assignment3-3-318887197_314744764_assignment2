@@ -3,8 +3,13 @@
     <div class="container">
       <!-- Page Header -->
       <div class="page-header">
-        <h1 class="page-title">{{ title }}</h1>
-        <p v-if="description" class="page-description">{{ description }}</p>
+        <div class="header-content">
+          <h1 class="page-title">{{ title }}</h1>
+          <p v-if="description" class="page-description">{{ description }}</p>
+        </div>
+        <div class="header-actions">
+          <slot name="header-action"></slot>
+        </div>
       </div>
       
       <!-- Loading State -->

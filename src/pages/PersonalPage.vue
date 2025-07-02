@@ -5,23 +5,87 @@
     :recipes="recipes"
     :watchedRecipeIds="watchedRecipeIds"
     :likedRecipeIds="likedRecipeIds"
+    :favoriteRecipeIds="favoriteRecipeIds"
     :isLoading="isLoading"
     :error="error"
     emptyMessage="You haven't created any personal recipes yet. Start creating to build your collection!"
     :onRetry="fetchPersonalRecipes"
+    @favoriteToggled="handleFavoriteToggled"
+    @likeToggled="handleLikeToggled"
   >
     <template #empty-action>
-      <button class="cta-button disabled" disabled>
+      <button 
+        class="cta-button" 
+        @click="showCreateModal = true"
+        type="button"
+      >
         Create Recipe
       </button>
     </template>
+
+    <!-- Create button when there ARE recipes -->
+    <template #header-action>
+      <button 
+        class="cta-button" 
+        @click="showCreateModal = true"
+        type="button"
+      >
+        <i class="fas fa-plus me-2"></i>
+        Create New Recipe
+      </button>
+    </template>
   </RecipePage>
+
+  <!-- Create Recipe Modal -->
+  <div v-if="showCreateModal" class="modal-backdrop">
+    <div class="modal-dialog" @click.stop>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create New Recipe</h5>
+          <button type="button" class="btn-close" @click="closeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <CreateRecipeForm
+            ref="recipeFormRef"
+            :recipe="newRecipe"
+            :showValidation="showValidation"
+            @submit="createRecipe"
+            @showValidation="showValidation = true"
+            @updateRecipe="newRecipe = $event"
+          />
+        </div>
+        <div class="modal-footer">
+          <!-- Validation Summary -->
+          <div v-if="showValidation && !isFormValid" class="validation-summary me-auto">
+            <small class="text-danger">
+              <i class="fas fa-exclamation-triangle me-1"></i>
+              Please fix the highlighted fields above
+            </small>
+          </div>
+          
+          <button type="button" class="btn btn-secondary" @click="closeModal">
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-primary" 
+            @click="createRecipe"
+            :disabled="isCreating || (showValidation && !isFormValid)"
+          >
+            <span v-if="isCreating" class="spinner-border spinner-border-sm me-2"></span>
+            {{ isCreating ? 'Creating...' : 'Create Recipe' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import RecipePage from '@/components/RecipePage.vue';
+import CreateRecipeForm from '@/components/CreateRecipeForm.vue';
 import store from '@/store';
 import { RecipeAPI } from '@/composables/RecipeAPI';
 import { MyRecipesAPI } from '@/composables/MyRecipesAPI';
@@ -31,18 +95,145 @@ const router = useRouter();
 
 // Use composables
 const { getRecipeInfo } = RecipeAPI();
-const { getMyRecipes } = MyRecipesAPI();
-const { watchedRecipeIds, likedRecipeIds, fetchUserData } = UserData();
+const { getMyRecipes, addMyRecipe } = MyRecipesAPI();
+const { watchedRecipeIds, likedRecipeIds, favoriteRecipeIds, fetchUserData } = UserData();
 
 // Reactive data
 const recipes = ref([]);
 const isLoading = ref(false);
 const error = ref('');
+const showCreateModal = ref(false);
+const isCreating = ref(false);
+const showValidation = ref(false);
+const recipeFormRef = ref(null);
+
+// New recipe form data
+const newRecipe = ref({
+  title: '',
+  readyInMinutes: null,
+  servings: null,
+  glutenFree: false,
+  vegan: false,
+  vegetarian: false,
+  ingredients: [''],
+  instructions: '',
+  image: '',
+  family_creator: '',
+  family_occasion: ''
+});
+
+// Get validation state from form component
+const isFormValid = computed(() => {
+  return recipeFormRef.value?.isFormValid || false;
+});
 
 // Check auth
 if (!store.username) {
   router.push({ name: 'login' });
 }
+
+// Event handlers (matching FavoritePage pattern)
+const handleFavoriteToggled = (event) => {
+  const { recipeId, newState } = event;
+  console.log('PersonalPage: Favorite toggled', { recipeId, newState });
+  
+  if (newState) {
+    if (!favoriteRecipeIds.value.includes(String(recipeId))) {
+      favoriteRecipeIds.value.push(String(recipeId));
+    }
+  } else {
+    favoriteRecipeIds.value = favoriteRecipeIds.value.filter(id => String(id) !== String(recipeId));
+  }
+};
+
+const handleLikeToggled = (event) => {
+  const { recipeId, newState } = event;
+  console.log('PersonalPage: Like toggled', { recipeId, newState });
+  
+  if (newState) {
+    if (!likedRecipeIds.value.includes(String(recipeId))) {
+      likedRecipeIds.value.push(String(recipeId));
+    }
+  } else {
+    likedRecipeIds.value = likedRecipeIds.value.filter(id => String(id) !== String(recipeId));
+  }
+
+  // Update the recipe's like count in the local list
+  const recipe = recipes.value.find(r => String(r.id) === String(recipeId));
+  if (recipe && typeof recipe.aggregateLikes === 'number') {
+    recipe.aggregateLikes += newState ? 1 : -1;
+    if (recipe.aggregateLikes < 0) recipe.aggregateLikes = 0;
+  }
+};
+
+// Modal functions
+const closeModal = () => {
+  showCreateModal.value = false;
+  resetForm();
+};
+
+const resetForm = () => {
+  newRecipe.value = {
+    title: '',
+    readyInMinutes: null,
+    servings: null,
+    glutenFree: false,
+    vegan: false,
+    vegetarian: false,
+    ingredients: [''],
+    instructions: '',
+    image: '',
+    family_creator: '',
+    family_occasion: ''
+  };
+  showValidation.value = false;
+};
+
+const createRecipe = async () => {
+  showValidation.value = true;
+  
+  if (!isFormValid.value) {
+    alert('Please fill in all required fields correctly.');
+    return;
+  }
+
+  isCreating.value = true;
+
+  try {
+    // Prepare recipe data
+    const recipeData = {
+      title: newRecipe.value.title.trim(),
+      readyInMinutes: newRecipe.value.readyInMinutes,
+      servings: newRecipe.value.servings,
+      glutenFree: newRecipe.value.glutenFree,
+      vegan: newRecipe.value.vegan,
+      vegetarian: newRecipe.value.vegetarian,
+      ingredients: newRecipe.value.ingredients
+        .filter(ing => ing.trim() !== '')
+        .map(ing => ({ original: ing.trim() })),
+      instructions: newRecipe.value.instructions.trim(),
+      image: newRecipe.value.image.trim(),
+      family_creator: newRecipe.value.family_creator.trim() || null,
+      family_occasion: newRecipe.value.family_occasion.trim() || null
+    };
+
+    // Create the recipe
+    const newRecipeId = await addMyRecipe(recipeData);
+    console.log('PersonalPage: Recipe created successfully with ID:', newRecipeId);
+
+    // Close modal and refresh recipes
+    closeModal();
+    await fetchPersonalRecipes();
+
+    alert('Recipe created successfully!');
+
+  } catch (err) {
+    console.error('Error creating recipe:', err);
+    alert('Failed to create recipe. Please try again.');
+  } finally {
+    isCreating.value = false;
+  }
+};
 
 const fetchPersonalRecipes = async () => {
   isLoading.value = true;
@@ -56,9 +247,11 @@ const fetchPersonalRecipes = async () => {
     if (personalRecipeIds.length > 0) {
       const recipePromises = personalRecipeIds.map(async (recipeId) => {
         try {
-          const recipeData = await getRecipeInfo(recipeId);
+          // Extract the actual ID from the object
+          const actualId = recipeId.recipe_id; // Unpack here
+          const recipeData = await getRecipeInfo(actualId);
           return {
-            id: recipeId,
+            id: actualId,
             ...recipeData
           };
         } catch (error) {
@@ -123,5 +316,81 @@ onMounted(() => {
 .cta-button.disabled:hover,
 .cta-button:disabled:hover {
   background: #9ca3af !important;
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  /* Removed @click handler - no outside click closing */
+}
+
+.modal-dialog {
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Validation Styles */
+.validation-summary {
+  display: flex;
+  align-items: center;
 }
 </style>

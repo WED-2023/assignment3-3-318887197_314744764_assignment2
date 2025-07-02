@@ -42,7 +42,7 @@ export function MyRecipesAPI() {
     }
   };
 
-  const createRecipe = async (recipeData) => {
+  const addMyRecipe = async (recipeData) => {
     isLoading.value = true;
     error.value = '';
     
@@ -66,6 +66,6 @@ export function MyRecipesAPI() {
     error,
     getMyRecipes,
     getMyFamilyRecipes,
-    createRecipe
+    addMyRecipe
   };
 }
