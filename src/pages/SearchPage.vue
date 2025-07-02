@@ -76,10 +76,29 @@
     </div>
 
     <div v-if="searchResults.length > 0">
-      <h2 class="mb-3">Search Results ({{ searchResults.length }} found)</h2>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Search Results ({{ sortedResults.length }} found)</h2>
+        <div class="d-flex align-items-center gap-2">
+          <label for="sortBy" class="form-label mb-0">Sort by:</label>
+          <select class="form-select" id="sortBy" v-model="sortBy" style="width: auto;">
+            <option value="default">Default</option>
+            <option value="title-asc">Alphabetical (A-Z)</option>
+            <option value="title-desc">Alphabetical (Z-A)</option>
+            <option value="likes-desc">Most Liked</option>
+            <option value="likes-asc">Least Liked</option>
+            <option value="time-desc">Longest Time</option>
+            <option value="time-asc">Shortest Time</option>
+          </select>
+        </div>
+      </div>
       <div class="row">
-        <div v-for="recipe in searchResults" :key="recipe.id" class="col-md-4 mb-4">
-          <RecipePreview :recipe="recipe" />
+        <div v-for="recipe in sortedResults" :key="recipe.id" class="col-md-4 mb-4">
+          <RecipePreview 
+            :recipe="recipe" 
+            :watchedRecipeIds="[]"
+            :favoriteRecipeIds="[]"
+            :likedRecipeIds="[]"
+          />
         </div>
       </div>
     </div>
@@ -96,7 +115,7 @@ import 'vue-multiselect/dist/vue-multiselect.min.css'
 import { diets } from '@/assets/diets';
 import { cuisines } from '@/assets/cuisines';
 import { intolerances as availableIntolerances } from '@/assets/intolerances';
-import { ref, reactive, onMounted } from 'vue'; // Add onMounted
+import { ref, reactive, onMounted, computed } from 'vue'; // Add onMounted
 import { RecipeAPI } from '@/composables/RecipeAPI';
 import RecipePreview from '@/components/RecipePreview.vue';
 import store from '@/store';
@@ -107,6 +126,7 @@ const { searchRecipes, getRecipeInfo, isLoading: searchLoading, error: searchErr
 // Reactive data
 const searchResults = ref([]);
 const hasSearched = ref(false);
+const sortBy = ref('default');
 
 const searchForm = reactive({
   title: '',
@@ -139,8 +159,34 @@ const areSearchParamsEqual = (params1, params2) => {
   return true;
 };
 
+const sortedResults = computed(() => {
+  if (!searchResults.value || searchResults.value.length === 0) return [];
+  
+  // Create a copy to avoid mutating original array
+  const results = [...searchResults.value];
+  
+  switch (sortBy.value) {
+    case 'title-asc':
+      return results.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    case 'title-desc':
+      return results.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    case 'likes-desc':
+      return results.sort((a, b) => (b.aggregateLikes || 0) - (a.aggregateLikes || 0));
+    case 'likes-asc':
+      return results.sort((a, b) => (a.aggregateLikes || 0) - (b.aggregateLikes || 0));
+    case 'time-asc':
+      return results.sort((a, b) => (a.readyInMinutes || 0) - (b.readyInMinutes || 0));
+    case 'time-desc':
+      return results.sort((a, b) => (b.readyInMinutes || 0) - (a.readyInMinutes || 0));
+    case 'default':
+    default:
+      return results; // Keep original server order
+  }
+});
+
 const handleSearch = async () => {
   hasSearched.value = true;
+  sortBy.value = 'default';
   
   try {
     // Prepare search parameters
