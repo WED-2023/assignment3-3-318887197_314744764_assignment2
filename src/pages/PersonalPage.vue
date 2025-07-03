@@ -50,7 +50,6 @@
             :recipe="newRecipe"
             :showValidation="showValidation"
             @submit="createRecipe"
-            @showValidation="showValidation = true"
             @updateRecipe="newRecipe = $event"
           />
         </div>
@@ -115,11 +114,13 @@ const newRecipe = ref({
   glutenFree: false,
   vegan: false,
   vegetarian: false,
-  ingredients: [''],
+  ingredients: [['', '', '']], // Change to array format
   instructions: '',
   image: '',
+  isFamilyRecipe: false,        // ADD THIS
   family_creator: '',
-  family_occasion: ''
+  family_occasion: '',
+  family_pictures: ['']         // ADD THIS
 });
 
 // Get validation state from form component
@@ -180,11 +181,13 @@ const resetForm = () => {
     glutenFree: false,
     vegan: false,
     vegetarian: false,
-    ingredients: [''],
+    ingredients: [['', '', '']], // Change to array format
     instructions: '',
     image: '',
+    isFamilyRecipe: false,      // ADD THIS
     family_creator: '',
-    family_occasion: ''
+    family_occasion: '',
+    family_pictures: ['']       // ADD THIS
   };
   showValidation.value = false;
 };
@@ -193,7 +196,6 @@ const createRecipe = async () => {
   showValidation.value = true;
   
   if (!isFormValid.value) {
-    alert('Please fill in all required fields correctly.');
     return;
   }
 
@@ -209,12 +211,17 @@ const createRecipe = async () => {
       vegan: newRecipe.value.vegan,
       vegetarian: newRecipe.value.vegetarian,
       ingredients: newRecipe.value.ingredients
-        .filter(ing => ing.trim() !== '')
-        .map(ing => ({ original: ing.trim() })),
+        .filter(ing => ing[0] && ing[0].trim() !== '' && ing[1] && ing[1] > 0)
+        .map(ing => [
+          ing[0].trim(),  // name
+          ing[1],         // amount (number)
+          ing[2] ? ing[2].trim() : ''  // unit (string)
+        ]),
       instructions: newRecipe.value.instructions.trim(),
       image: newRecipe.value.image.trim(),
       family_creator: newRecipe.value.family_creator.trim() || null,
-      family_occasion: newRecipe.value.family_occasion.trim() || null
+      family_occasion: newRecipe.value.family_occasion.trim() || null,
+      family_pictures: (newRecipe.value.family_pictures || []).filter(pic => pic.trim() !== '') || null // ADD NULL CHECK
     };
 
     // Create the recipe
@@ -224,8 +231,6 @@ const createRecipe = async () => {
     // Close modal and refresh recipes
     closeModal();
     await fetchPersonalRecipes();
-
-    alert('Recipe created successfully!');
 
   } catch (err) {
     console.error('Error creating recipe:', err);

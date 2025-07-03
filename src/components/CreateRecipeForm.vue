@@ -31,7 +31,6 @@
           id="title"
           :value="recipe.title"
           @input="updateField('title', $event.target.value)"
-          @blur="$emit('showValidation')"
           required
           placeholder="Enter recipe title"
         />
@@ -48,9 +47,8 @@
           id="image"
           :value="recipe.image"
           @input="updateField('image', $event.target.value)"
-          @blur="$emit('showValidation')"
           required
-          placeholder="https://example.com/image.jpg"
+          placeholder="https://potat.com/potat.jpg"
         />
         <div v-if="showValidation && !validation.image" class="invalid-feedback">
           Valid image URL is required
@@ -68,7 +66,6 @@
           id="readyInMinutes"
           :value="recipe.readyInMinutes"
           @input="updateField('readyInMinutes', Number($event.target.value))"
-          @blur="$emit('showValidation')"
           required
           min="1"
           placeholder="30"
@@ -86,7 +83,6 @@
           id="servings"
           :value="recipe.servings"
           @input="updateField('servings', Number($event.target.value))"
-          @blur="$emit('showValidation')"
           required
           min="1"
           placeholder="4"
@@ -103,7 +99,7 @@
       <div class="form-check-group">
         <div class="form-check">
           <input
-            class="form-check-input"
+            class="form-check-input diet-checkbox"
             type="checkbox"
             id="vegetarian"
             :checked="recipe.vegetarian"
@@ -160,7 +156,6 @@
                 id="family_creator"
                 :value="recipe.family_creator"
                 @input="updateField('family_creator', $event.target.value)"
-                @blur="$emit('showValidation')"
                 required
                 placeholder="e.g., Grandma Sarah, Uncle Mike"
               />
@@ -177,7 +172,6 @@
                 id="family_occasion"
                 :value="recipe.family_occasion"
                 @input="updateField('family_occasion', $event.target.value)"
-                @blur="$emit('showValidation')"
                 required
                 placeholder="e.g., Christmas dinner, Birthday celebrations"
               />
@@ -225,32 +219,70 @@
         </div>
       </div>
     </div>
-
+    
     <!-- Ingredients -->
     <div class="mb-3">
       <label class="form-label">Ingredients *</label>
-      <div v-for="(ingredient, index) in recipe.ingredients" :key="index" class="input-group mb-2">
-        <input
-          type="text"
-          class="form-control"
-          :class="{ 'is-invalid': showValidation && !validation.ingredients }"
-          :value="ingredient"
-          @input="updateIngredient(index, $event.target.value)"
-          @blur="$emit('showValidation')"
-          :placeholder="`Ingredient ${index + 1}`"
-          required
-        />
-        <button
-          type="button"
-          class="btn btn-outline-danger"
-          @click="removeIngredient(index)"
-          v-if="recipe.ingredients.length > 1"
-        >
-          <i class="fas fa-trash"></i>
-        </button>
+      <div v-for="(ingredient, index) in recipe.ingredients" :key="index" class="ingredient-row mb-3">
+        <div class="row">
+          <div class="col-md-4">
+            <input
+              type="text"
+              class="form-control"
+              :class="{ 'is-invalid': showValidation && !isIngredientValid(ingredient) && (!ingredient[0] || ingredient[0].trim() === '') }"
+              :value="ingredient[0] || ''"
+              @input="updateIngredientField(index, 0, $event.target.value)"
+              placeholder="Ingredient name *"
+              required
+            />
+            <div v-if="showValidation && !isIngredientValid(ingredient) && (!ingredient[0] || ingredient[0].trim() === '')" class="invalid-feedback">
+              Ingredient name is required
+            </div>
+          </div>
+          <div class="col-md-3">
+            <input
+              type="number"
+              class="form-control"
+              :class="{ 'is-invalid': showValidation && !isIngredientValid(ingredient) && (!ingredient[1] || ingredient[1] <= 0) }"
+              :value="ingredient[1] || ''"
+              @input="updateIngredientField(index, 1, Number($event.target.value))"
+              step="0.01"
+              min="0"
+              placeholder="Amount *"
+              required
+            />
+            <div v-if="showValidation && !isIngredientValid(ingredient) && (!ingredient[1] || ingredient[1] <= 0)" class="invalid-feedback">
+              Amount must be greater than 0
+            </div>
+          </div>
+          <div class="col-md-4">
+            <input
+              type="text"
+              class="form-control"
+              :class="{ 'is-invalid': showValidation && !isIngredientValid(ingredient) && (!ingredient[2] || ingredient[2].trim() === '') }"
+              :value="ingredient[2] || ''"
+              @input="updateIngredientField(index, 2, $event.target.value)"
+              placeholder="Unit (cup, tsp, etc.) *"
+              required
+            />
+            <div v-if="showValidation && !isIngredientValid(ingredient) && (!ingredient[2] || ingredient[2].trim() === '')" class="invalid-feedback">
+              Unit is required
+            </div>
+          </div>
+          <div class="col-md-1">
+            <button
+              type="button"
+              class="btn btn-outline-danger w-100"
+              @click="removeIngredient(index)"
+              v-if="recipe.ingredients.length > 1"
+            >
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
       </div>
       <div v-if="showValidation && !validation.ingredients" class="invalid-feedback d-block">
-        At least one ingredient is required
+        Please complete all ingredient fields
       </div>
       <button
         type="button"
@@ -270,7 +302,6 @@
         id="instructions"
         :value="recipe.instructions"
         @input="updateField('instructions', $event.target.value)"
-        @blur="$emit('showValidation')"
         rows="6"
         required
         placeholder="Enter step-by-step cooking instructions..."
@@ -320,13 +351,24 @@ const validation = computed(() => ({
   title: props.recipe.title && props.recipe.title.trim() !== '',
   readyInMinutes: props.recipe.readyInMinutes && props.recipe.readyInMinutes > 0,
   servings: props.recipe.servings && props.recipe.servings > 0,
-  ingredients: props.recipe.ingredients && props.recipe.ingredients.some(ing => ing && ing.trim() !== ''),
+  ingredients: props.recipe.ingredients && props.recipe.ingredients.every(ing => 
+    ing && ing[0] && ing[0].trim() !== '' && 
+    ing[1] && ing[1] > 0 && 
+    ing[2] && ing[2].trim() !== ''
+  ), // Changed from .some() to .every() to validate ALL ingredients
   instructions: props.recipe.instructions && props.recipe.instructions.trim() !== '',
   image: props.recipe.image && props.recipe.image.trim() !== '' && isValidUrl(props.recipe.image),
-  // Family recipe validations (only required if isFamilyRecipe is true)
   family_creator: !props.recipe.isFamilyRecipe || (props.recipe.family_creator && props.recipe.family_creator.trim() !== ''),
   family_occasion: !props.recipe.isFamilyRecipe || (props.recipe.family_occasion && props.recipe.family_occasion.trim() !== '')
 }));
+
+// Add individual ingredient validation
+const isIngredientValid = (ingredient) => {
+  return ingredient && 
+         ingredient[0] && ingredient[0].trim() !== '' && 
+         ingredient[1] && ingredient[1] > 0 && 
+         ingredient[2] && ingredient[2].trim() !== '';
+};
 
 // Overall form validation
 const isFormValid = computed(() => {
@@ -360,14 +402,17 @@ const updateField = (field, value) => {
 };
 
 // Update ingredient helper
-const updateIngredient = (index, value) => {
+const updateIngredientField = (index, fieldIndex, value) => {
   const newIngredients = [...props.recipe.ingredients];
-  newIngredients[index] = value;
+  if (!newIngredients[index]) {
+    newIngredients[index] = ['', '', ''];
+  }
+  newIngredients[index][fieldIndex] = value;
   emit('updateRecipe', { ...props.recipe, ingredients: newIngredients });
 };
 
 const addIngredient = () => {
-  const newIngredients = [...props.recipe.ingredients, ''];
+  const newIngredients = [...props.recipe.ingredients, ['', '', '']];
   emit('updateRecipe', { ...props.recipe, ingredients: newIngredients });
 };
 
@@ -455,12 +500,30 @@ defineExpose({
   }
 }
 
+/* Family recipe toggle - red */
 .form-check-input:checked {
   background-color: #dc3545;
   border-color: #dc3545;
 }
 
+/* Diet checkboxes - blue */
+.diet-checkbox:checked {
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+}
+
 .card-header {
   border-bottom: 1px solid #dee2e6;
+}
+
+.ingredient-row {
+  padding: 0.5rem;
+  border: 1px solid #e9ecef;
+  border-radius: 0.375rem;
+  background-color: #f8f9fa;
+}
+
+.ingredient-row:hover {
+  background-color: #e9ecef;
 }
 </style>
