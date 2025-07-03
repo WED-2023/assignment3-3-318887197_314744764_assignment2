@@ -275,6 +275,13 @@ export default {
         const success = await this.toggleFavorite(recipeId, this.isFavorite);
         if (success) {
           this.isFavorite = !this.isFavorite;
+
+          // Update the store's favoriteRecipeIds array
+          if (this.isFavorite) {
+            store.addToFavorites(recipeId);
+          } else {
+            store.removeFromFavorites(recipeId);
+          }
           console.log('RecipeViewPage: Favorite toggled successfully. New state:', this.isFavorite);
         } else {
           console.error('RecipeViewPage: toggleFavorite returned false');
@@ -300,17 +307,23 @@ export default {
         if (success) {
           this.isLiked = !this.isLiked;
 
-          if (this.isLiked) {
-            // User just liked the recipe
-            this.recipe.aggregateLikes += 1;
-          } else {
-            // User just unliked the recipe
-            this.recipe.aggregateLikes -= 1;
-            // Prevent negative likes
-            if (this.recipe.aggregateLikes < 0) {
-              this.recipe.aggregateLikes = 0;
-            }
+          // Update the store's likedRecipeIds array
+        if (this.isLiked) {
+          store.addToLiked(recipeId);
+          // User just liked the recipe
+          this.recipe.aggregateLikes += 1;
+        } else {
+          store.removeFromLiked(recipeId);
+          // User just unliked the recipe
+          this.recipe.aggregateLikes -= 1;
+          // Prevent negative likes
+          if (this.recipe.aggregateLikes < 0) {
+            this.recipe.aggregateLikes = 0;
           }
+        }
+        // Update the search cache if it exists
+        this.updateSearchCache(recipeId, this.isLiked);
+
           console.log('RecipeViewPage: Like toggled successfully. New state:', this.isLiked);
         } else {
           console.error('RecipeViewPage: toggleLiked returned false');
@@ -319,6 +332,28 @@ export default {
       } catch (error) {
         console.error('Error toggling like:', error);
         alert('Failed to update likes. Please try again.');
+      }
+    },
+
+    // Add this new method to update search cache
+    updateSearchCache(recipeId, isLiked) {
+      const cachedSearch = store.getCachedSearchData();
+      if (cachedSearch && cachedSearch.results) {
+        const recipe = cachedSearch.results.find(r => r.id == recipeId);
+        if (recipe) {
+          console.log('RecipeViewPage: Updating search cache for recipe:', recipeId);
+          
+          // Update the like count in cached search results
+          recipe.aggregateLikes = (recipe.aggregateLikes || 0) + (isLiked ? 1 : -1);
+          
+          // Prevent negative likes
+          if (recipe.aggregateLikes < 0) {
+            recipe.aggregateLikes = 0;
+          }
+          
+          // Update the cache with modified results
+          store.cacheSearchData(cachedSearch.results, cachedSearch.params);
+        }
       }
     }
   }

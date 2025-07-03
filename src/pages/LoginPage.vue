@@ -88,11 +88,15 @@ import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import store from '@/store';
 import { AuthAPI } from '@/composables/AuthAPI';
+import { FavoritesAPI } from '@/composables/FavoritesAPI';
+import { LikesAPI } from '@/composables/LikesAPI';
 
 const router = useRouter();
 
 // Use composables
 const { login, isLoading: authLoading, error: authError } = AuthAPI();
+const { getFavorites } = FavoritesAPI();
+const { getLiked } = LikesAPI();
 
 // Reactive data
 const loginForm = reactive({
@@ -181,6 +185,19 @@ const handleLogin = async () => {
 
     // Set username in store
     store.username = loginForm.username;
+    
+    // Load user's data after login
+    try {
+      const [favoriteIds, likedIds] = await Promise.all([
+        getFavorites(),
+        getLiked()
+      ]);
+      
+      store.initializeUserData(favoriteIds, likedIds);
+      console.log('LoginPage: User data loaded after login');
+    } catch (error) {
+      console.error('Error loading user data after login:', error);
+    }
     
     // Redirect to main page
     router.push({ name: 'main' });

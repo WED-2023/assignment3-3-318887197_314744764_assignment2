@@ -95,9 +95,11 @@
         <div v-for="recipe in sortedResults" :key="recipe.id" class="col-md-4 mb-4">
           <RecipePreview 
             :recipe="recipe" 
-            :watchedRecipeIds="[]"
-            :favoriteRecipeIds="[]"
-            :likedRecipeIds="[]"
+            :watchedRecipeIds="store.watchedRecipeIds"
+            :favoriteRecipeIds="store.favoriteRecipeIds"
+            :likedRecipeIds="store.likedRecipeIds"
+            @likeToggled="handleLikeToggled"
+            @favoriteToggled="handleFavoriteToggled"
           />
         </div>
       </div>
@@ -115,13 +117,17 @@ import 'vue-multiselect/dist/vue-multiselect.min.css'
 import { diets } from '@/assets/diets';
 import { cuisines } from '@/assets/cuisines';
 import { intolerances as availableIntolerances } from '@/assets/intolerances';
-import { ref, reactive, onMounted, computed } from 'vue'; // Add onMounted
+import { ref, reactive, onMounted, computed } from 'vue';
 import { RecipeAPI } from '@/composables/RecipeAPI';
+import { FavoritesAPI } from '@/composables/FavoritesAPI';
+import { LikesAPI } from '@/composables/LikesAPI';
 import RecipePreview from '@/components/RecipePreview.vue';
 import store from '@/store';
 
 // Use composables
 const { searchRecipes, getRecipeInfo, isLoading: searchLoading, error: searchError } = RecipeAPI();
+const { getFavorites } = FavoritesAPI();
+const { getLiked } = LikesAPI();
 
 // Reactive data
 const searchResults = ref([]);
@@ -135,6 +141,35 @@ const searchForm = reactive({
   intolerances: [],
   amount: 5
 });
+
+// Add function to load user data
+const loadUserData = async () => {
+  if (!store.username) {
+    console.log('SearchPage: No user logged in, skipping user data load');
+    return;
+  }
+
+  try {
+    console.log('SearchPage: Loading user favorites and likes');
+    
+    // Fetch user's favorites and likes
+    const [favoriteIds, likedIds] = await Promise.all([
+      getFavorites(),
+      getLiked()
+    ]);
+
+    // Update store with user's data
+    store.favoriteRecipeIds = favoriteIds.map(id => String(id));
+    store.likedRecipeIds = likedIds.map(id => String(id));
+
+    console.log('SearchPage: Loaded favorites:', store.favoriteRecipeIds);
+    console.log('SearchPage: Loaded likes:', store.likedRecipeIds);
+
+  } catch (error) {
+    console.error('SearchPage: Error loading user data:', error);
+  }
+};
+
 
 // Helper function to compare search parameters
 const areSearchParamsEqual = (params1, params2) => {
@@ -183,6 +218,42 @@ const sortedResults = computed(() => {
       return results; // Keep original server order
   }
 });
+
+// Event handlers for user interactions
+// Update your event handlers to match the emitted events:
+const handleLikeToggled = (event) => {
+  console.log('SearchPage: Like toggled:', event);
+  
+  // Update store
+  if (event.newState) {
+    store.addToLiked(event.recipeId);
+  } else {
+    store.removeFromLiked(event.recipeId);
+  }
+  
+  // Update the like count in search results immediately
+  const recipe = searchResults.value.find(r => r.id === event.recipeId);
+  if (recipe) {
+    recipe.aggregateLikes = (recipe.aggregateLikes || 0) + (event.newState ? 1 : -1);
+  }
+  
+  // Force Vue to update
+  searchResults.value = [...searchResults.value];
+};
+
+const handleFavoriteToggled = (event) => {
+  console.log('SearchPage: Favorite toggled:', event);
+  
+  // Update store
+  if (event.newState) {
+    store.addToFavorites(event.recipeId);
+  } else {
+    store.removeFromFavorites(event.recipeId);
+  }
+  
+  // Force Vue to update
+  searchResults.value = [...searchResults.value];
+};
 
 const handleSearch = async () => {
   hasSearched.value = true;
@@ -251,8 +322,11 @@ const handleSearch = async () => {
 };
 
 // Load cached search on mount
-onMounted(() => {
+onMounted(async () => {
   console.log('SearchPage: onMounted called');
+
+  // Load user's favorites and likes first
+  await loadUserData();
   
   // Check if referrer is from the same origin (internal navigation)
   const cameFromApp = document.referrer && 
@@ -281,8 +355,6 @@ onMounted(() => {
   }
 });
 </script>
-
-
 
 <style scoped>
 .container {

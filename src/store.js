@@ -5,6 +5,11 @@ const store = reactive({
   server_domain: "https://localhost:443",
   lastViewedRecipes: [],
   
+  // Add user interaction tracking
+  favoriteRecipeIds: [],
+  likedRecipeIds: [],
+  watchedRecipeIds: [],
+  
   // Add caching properties
   mainPageCache: null,
   cacheTimestamp: null,
@@ -21,6 +26,52 @@ const store = reactive({
     // Keep only last 3
     if (this.lastViewedRecipes.length > 3) {
       this.lastViewedRecipes = this.lastViewedRecipes.slice(0, 3);
+    }
+  },
+
+  // User interaction methods
+  addToFavorites(recipeId) {
+    if (!this.favoriteRecipeIds.includes(recipeId)) {
+      this.favoriteRecipeIds.push(recipeId);
+      console.log('Store: Added to favorites:', recipeId);
+    }
+  },
+
+  removeFromFavorites(recipeId) {
+    this.favoriteRecipeIds = this.favoriteRecipeIds.filter(id => id !== recipeId);
+    console.log('Store: Removed from favorites:', recipeId);
+  },
+
+  addToLiked(recipeId) {
+    if (!this.likedRecipeIds.includes(recipeId)) {
+      this.likedRecipeIds.push(recipeId);
+      console.log('Store: Added to liked:', recipeId);
+    }
+  },
+
+  removeFromLiked(recipeId) {
+    this.likedRecipeIds = this.likedRecipeIds.filter(id => id !== recipeId);
+    console.log('Store: Removed from liked:', recipeId);
+  },
+
+  // Keep only ONE toggleLike method
+  toggleLike(recipeId) {
+    const index = this.likedRecipeIds.indexOf(recipeId);
+    if (index > -1) {
+      this.likedRecipeIds.splice(index, 1);
+      console.log('Store: Unliked recipe:', recipeId);
+      return false; // unliked
+    } else {
+      this.likedRecipeIds.push(recipeId);
+      console.log('Store: Liked recipe:', recipeId);
+      return true; // liked
+    }
+  },
+
+  addToWatched(recipeId) {
+    if (!this.watchedRecipeIds.includes(recipeId)) {
+      this.watchedRecipeIds.push(recipeId);
+      console.log('Store: Added to watched:', recipeId);
     }
   },
 
@@ -109,12 +160,23 @@ const store = reactive({
     this.clearSearchCache();
   },
 
+  // Add a method to initialize user data
+  initializeUserData(favoriteIds = [], likedIds = [], watchedIds = []) {
+    console.log('Store: Initializing user data');
+    this.favoriteRecipeIds = favoriteIds.map(id => String(id));
+    this.likedRecipeIds = likedIds.map(id => String(id));
+    this.watchedRecipeIds = watchedIds.map(id => String(id));
+  },
+
   logout() {
-  console.log('Store: User logging out, clearing all data');
-  this.username = null;
-  this.lastViewedRecipes = [];
-  this.clearMainPageCache();
-  this.clearSearchCache();
+    console.log('Store: User logging out, clearing all data');
+    this.username = null;
+    this.lastViewedRecipes = [];
+    this.favoriteRecipeIds = [];
+    this.likedRecipeIds = [];
+    this.watchedRecipeIds = [];
+    this.clearMainPageCache();
+    this.clearSearchCache();
   },
 });
 

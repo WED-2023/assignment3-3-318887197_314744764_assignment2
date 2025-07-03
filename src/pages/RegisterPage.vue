@@ -450,7 +450,7 @@ const handleRegister = async () => {
     // Redirect to login after 2 seconds
     setTimeout(() => {
       router.push({ name: 'login' });
-    }, 2000);
+    }, 250);
     
   } catch (err) {
     console.error('Registration failed:', err);
