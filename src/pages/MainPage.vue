@@ -2,57 +2,23 @@
   <div class="container">
     <h1 class="mt-5 mb-4">Welcome to Recipe World</h1>
     
-    <!-- Random Recipes Section -->
-    <section class="mb-5">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Random Recipes</h2>
-        <button @click="refreshData" class="btn btn-outline-primary btn-sm" :disabled="isRefreshing">
-          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
-          {{ isRefreshing ? 'Refreshing...' : 'Refresh' }}
-        </button>
-      </div>
-      
-      <div v-if="randomLoading" class="text-center">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-      <div v-else-if="mainPageRandomError" class="alert alert-danger">
-        {{ mainPageRandomError }}
-        <button @click="fetchRandomRecipes(true)" class="btn btn-sm btn-outline-danger ms-2">Retry</button>
-      </div>
-        <div v-else class="row">
-          <div v-for="recipe in randomRecipes" :key="recipe.id" class="col-md-4 mb-4">
-            <RecipePreview 
-              :recipe="recipe" 
-              :watchedRecipeIds="localWatchedRecipeIds"
-              :favoriteRecipeIds="favoriteRecipeIds"
-              :likedRecipeIds="likedRecipeIds"
-              @favoriteToggled="handleFavoriteToggled"
-              @likeToggled="handleLikeToggled"
-            />
+    <div class="row">
+      <!-- Left Column: Random Recipes -->
+      <div class="col-lg-6">
+        <section class="mb-5">
+          <h2 class="mb-3">Explore These Recipes</h2>
+          
+          <div v-if="randomLoading" class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
           </div>
-        </div>
-    </section>
-
-    <!-- Second Section: Last Viewed (logged in) OR Blurred Random (not logged in) -->
-    <section class="mb-5">
-      <!-- Logged in users: Show last viewed recipes -->
-      <div v-if="store.username">
-        <h2 class="mb-3">Your Recently Viewed</h2>
-        <div v-if="lastViewedLoading" class="text-center">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+          <div v-else-if="mainPageRandomError" class="alert alert-danger">
+            {{ mainPageRandomError }}
+            <button @click="fetchRandomRecipes(true)" class="btn btn-sm btn-outline-danger ms-2">Retry</button>
           </div>
-        </div>
-        <div v-else-if="lastViewedError" class="alert alert-warning">
-          {{ lastViewedError }}
-        </div>
-        <div v-else-if="lastViewedRecipes.length === 0" class="alert alert-info">
-          You haven't viewed any recipes yet. Start exploring!
-        </div>
-          <div v-else class="row">
-            <div v-for="recipe in lastViewedRecipes" :key="recipe.id" class="col-md-4 mb-4">
+          <div v-else>
+            <div v-for="recipe in randomRecipes" :key="recipe.id" class="mb-4">
               <RecipePreview 
                 :recipe="recipe" 
                 :watchedRecipeIds="localWatchedRecipeIds"
@@ -63,43 +29,85 @@
               />
             </div>
           </div>
+          
+          <!-- Refresh Button under Random Recipes -->
+          <div class="text-center mt-4">
+            <button @click="refreshData" class="btn btn-outline-primary" :disabled="isRefreshing">
+              <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+              {{ isRefreshing ? 'Refreshing...' : 'Refresh Recipes' }}
+            </button>
+          </div>
+        </section>
       </div>
 
-      <!-- Not logged in: Show blurred random recipes with login prompt -->
-      <div v-else>
-        <div class="position-relative">
-          <h2 class="mb-3">Your Recently Viewed</h2>
-          <div v-if="blurredRandomLoading" class="text-center">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Loading...</span>
+      <!-- Right Column: Last Viewed (logged in) OR Blurred Random (not logged in) -->
+      <div class="col-lg-6">
+        <section class="mb-5">
+          <!-- Logged in users: Show last viewed recipes -->
+          <div v-if="store.username">
+            <h2 class="mb-3">Your Recently Viewed</h2>
+            <div v-if="lastViewedLoading" class="text-center">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>
-          </div>
-          <div v-else class="row">
-            <div v-for="recipe in blurredRandomRecipes" :key="`blurred-${recipe.id}`" class="col-md-4 mb-4">
-              <div class="blurred-recipe-container">
+            <div v-else-if="lastViewedError" class="alert alert-warning">
+              {{ lastViewedError }}
+            </div>
+            <div v-else-if="lastViewedRecipes.length === 0" class="alert alert-info">
+              You haven't viewed any recipes yet. Start exploring!
+            </div>
+            <div v-else>
+              <div v-for="recipe in lastViewedRecipes" :key="recipe.id" class="mb-4">
                 <RecipePreview 
                   :recipe="recipe" 
-                  :isBlurred="true" 
-                  :isClickable="false"
-                  :watchedRecipeIds="[]"
+                  :watchedRecipeIds="localWatchedRecipeIds"
+                  :favoriteRecipeIds="favoriteRecipeIds"
+                  :likedRecipeIds="likedRecipeIds"
+                  @favoriteToggled="handleFavoriteToggled"
+                  @likeToggled="handleLikeToggled"
                 />
               </div>
             </div>
           </div>
-          
-          <!-- Login overlay -->
-          <div class="login-overlay">
-            <div class="login-prompt">
-              <h4 class="mb-3">See Your Recently Viewed Recipes</h4>
-              <p class="mb-3">Login to track and view your recipe history</p>
-              <router-link :to="{ name: 'login' }" class="btn btn-primary btn-lg">
-                Login Now
-              </router-link>
+
+          <!-- Not logged in: Show blurred random recipes with login prompt -->
+          <div v-else>
+            <div class="position-relative">
+              <h2 class="mb-3">Your Recently Viewed</h2>
+              <div v-if="blurredRandomLoading" class="text-center">
+                <div class="spinner-border" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </div>
+              <div v-else>
+                <div v-for="recipe in blurredRandomRecipes" :key="`blurred-${recipe.id}`" class="mb-4">
+                  <div class="blurred-recipe-container">
+                    <RecipePreview 
+                      :recipe="recipe" 
+                      :isBlurred="true" 
+                      :isClickable="false"
+                      :watchedRecipeIds="[]"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Login overlay -->
+              <div class="login-overlay">
+                <div class="login-prompt">
+                  <h4 class="mb-3">See Your Recently Viewed Recipes</h4>
+                  <p class="mb-3">Login to track and view your recipe history</p>
+                  <router-link :to="{ name: 'login' }" class="btn btn-primary btn-lg">
+                    Login Now
+                  </router-link>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 
@@ -423,6 +431,17 @@ h2 {
   animation: fa-spin 1s infinite linear;
 }
 
+/* Add spacing between columns for desktop */
+.col-lg-6 {
+  padding-left: 3rem;
+  padding-right: 3rem;
+}
+
+/* Add gap between columns */
+.row {
+  --bs-gutter-x: 4rem;
+}
+
 /* Blurred recipes section */
 .blurred-recipe-container {
   filter: blur(4px);
@@ -482,7 +501,17 @@ h2 {
 }
 
 /* Mobile responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 991px) {
+  .col-lg-6 {
+    margin-bottom: 3rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  .row {
+    --bs-gutter-x: 2rem;
+  }
+  
   .login-prompt {
     margin: 1rem;
     padding: 1.5rem;
@@ -494,6 +523,22 @@ h2 {
   
   .login-prompt p {
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-prompt {
+    margin: 0.5rem;
+    padding: 1rem;
+  }
+
+  .col-lg-6 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .row {
+    --bs-gutter-x: 1rem;
   }
 }
 </style>
