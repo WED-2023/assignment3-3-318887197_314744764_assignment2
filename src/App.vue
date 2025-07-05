@@ -271,18 +271,51 @@ const handleCreateRecipe = async () => {
   }
 
   try {
-    console.log('Creating recipe:', newRecipe.value);
+    console.log('Creating recipe - Raw data:', newRecipe.value);
+    console.log('isFamilyRecipe value:', newRecipe.value.isFamilyRecipe);
 
-    const recipeId = await addMyRecipe(newRecipe.value);
+    // Process the recipe data EXACTLY like PersonalPage.vue and FamiliaPage.vue
+    const processedRecipeData = {
+      title: newRecipe.value.title.trim(),
+      readyInMinutes: newRecipe.value.readyInMinutes,
+      servings: newRecipe.value.servings,
+      glutenFree: newRecipe.value.glutenFree,
+      vegan: newRecipe.value.vegan,
+      vegetarian: newRecipe.value.vegetarian,
+      ingredients: newRecipe.value.ingredients
+        .filter(ing => 
+          ing[0] && ing[0].trim() !== '' && 
+          ing[1] && ing[1] > 0 && 
+          ing[2] && ing[2].trim() !== ''
+        )
+        .map(ing => [
+          ing[0].trim(),
+          ing[1],
+          ing[2].trim()
+        ]),
+      instructions: newRecipe.value.instructions.trim(),
+      image: newRecipe.value.image.trim(),
+      isFamilyRecipe: newRecipe.value.isFamilyRecipe, // This should preserve the boolean
+      family_creator: newRecipe.value.family_creator?.trim() || null,
+      family_occasion: newRecipe.value.family_occasion?.trim() || null,
+      family_pictures: (newRecipe.value.family_pictures || []).filter(pic => pic.trim() !== '') || null
+    };
+
+    console.log('Processed recipe data:', processedRecipeData);
+    console.log('Processed isFamilyRecipe value:', processedRecipeData.isFamilyRecipe);
+
+    // Use the processed data instead of raw newRecipe.value
+    const recipeId = await addMyRecipe(processedRecipeData);
     
     console.log('Recipe created successfully with ID:', recipeId);
     closeCreateRecipeModal();
     
-    // Show success toast instead of alert
+    // Show success toast
     showSuccessToast();
     
-    // Optionally redirect based on recipe type
-    if (newRecipe.value.isFamilyRecipe) {
+    // Use the processed data for routing decision
+    console.log('Redirecting based on recipe type:', processedRecipeData.isFamilyRecipe);
+    if (processedRecipeData.isFamilyRecipe) {
       router.push({ name: 'familia' });
     } else {
       router.push({ name: 'personal' });
@@ -290,7 +323,6 @@ const handleCreateRecipe = async () => {
     
   } catch (error) {
     console.error('Error creating recipe:', error);
-    // Show error toast instead of alert
     showErrorToast('Failed to create recipe. Please try again.');
   }
 };

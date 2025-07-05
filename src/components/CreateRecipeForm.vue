@@ -113,7 +113,7 @@
             </div>
             <div class="form-check">
               <input
-                class="form-check-input"
+                class="form-check-input diet-checkbox"
                 type="checkbox"
                 id="vegan"
                 :checked="recipe.vegan"
@@ -125,7 +125,7 @@
             </div>
             <div class="form-check">
               <input
-                class="form-check-input"
+                class="form-check-input diet-checkbox"
                 type="checkbox"
                 id="glutenFree"
                 :checked="recipe.glutenFree"

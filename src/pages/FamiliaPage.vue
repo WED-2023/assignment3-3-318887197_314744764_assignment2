@@ -226,7 +226,7 @@ const createRecipe = async () => {
         ]),
       instructions: newRecipe.value.instructions.trim(),
       image: newRecipe.value.image.trim(),
-      isFamilyRecipe: true,
+      isFamilyRecipe: newRecipe.value.isFamilyRecipe,
       family_creator: newRecipe.value.family_creator.trim() || null,
       family_occasion: newRecipe.value.family_occasion.trim() || null,
       family_pictures: (newRecipe.value.family_pictures || []).filter(pic => pic.trim() !== '') || null
@@ -237,6 +237,12 @@ const createRecipe = async () => {
 
     closeModal();
     await fetchFamilyRecipes();
+
+    if (recipeData.isFamilyRecipe) {
+      router.push({ name: 'familia' });
+    } else {
+      router.push({ name: 'personal' });
+    }
 
   } catch (err) {
     console.error('Error creating family recipe:', err);
