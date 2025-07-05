@@ -17,6 +17,14 @@
             <router-link :to="{ name: 'search' }" class="nav-item">Search</router-link>
           </div>
           
+          <!-- Create Recipe Button - Only for logged in users -->
+          <div v-if="username" class="create-recipe-section">
+            <button @click="openCreateRecipeModal" class="create-recipe-btn">
+              <i class="fas fa-plus"></i>
+              <span class="create-text">Create Recipe</span>
+            </button>
+          </div>
+          
           <!-- Personal Section - Only for logged in users -->
           <div v-if="username" class="personal-section">
             <div 
@@ -38,10 +46,9 @@
                 @mouseenter="handlePersonalHover(true)"
                 @mouseleave="handlePersonalHover(false)"
               >
-                <!-- Only Favorites is functional -->
                 <router-link :to="{ name: 'favorites' }" class="dropdown-item">Favorites ⭐</router-link>
-                <router-link :to="{ name: 'personal' }" class="dropdown-item">Private</router-link>
-                <a href="#" @click.prevent class="dropdown-item disabled">La Familia</a>
+                <router-link :to="{ name: 'personal' }" class="dropdown-item">My Recipes</router-link>
+                <router-link :to="{ name: 'familia' }" class="dropdown-item">La Familia 👨‍👩‍👧‍👦</router-link>
               </div>
             </div>
           </div>
@@ -78,7 +85,6 @@
                 @mouseleave="handleUserHover(false)"
               >
                 <a href="#" @click.prevent class="dropdown-item disabled">Profile</a>
-                <!-- Only Logout is functional -->
                 <button @click="logout" class="dropdown-item logout-btn">Sign Out</button>
               </div>
             </div>
@@ -86,13 +92,73 @@
           
           <!-- Guest Section -->
           <div v-else class="guest-section">
-            <!-- Login and Register are functional -->
             <router-link :to="{ name: 'login' }" class="auth-link">Login</router-link>
             <router-link :to="{ name: 'register' }" class="auth-link">Register</router-link>
           </div>
         </div>
       </div>
     </nav>
+    
+    <!-- Toast Container - MOVED OUTSIDE NAVBAR -->
+    <div 
+      v-if="showToast" 
+      class="toast-container"
+      :class="{ 'show': showToast }"
+    >
+      <div 
+        class="toast"
+        :class="{
+          'toast-success': toastType === 'success',
+          'toast-error': toastType === 'error'
+        }"
+      >
+        <div class="toast-content">
+          <i 
+            class="fas"
+            :class="{
+              'fa-check-circle': toastType === 'success',
+              'fa-exclamation-circle': toastType === 'error'
+            }"
+          ></i>
+          <span class="toast-message">{{ toastMessage }}</span>
+        </div>
+        <button @click="hideToast" class="toast-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Global Create Recipe Modal -->
+    <div v-if="showCreateRecipeModal" class="modal-overlay" @click="closeCreateRecipeModal">
+      <div class="modal-container" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <i class="fas fa-plus-circle text-primary me-2"></i>
+            Create New Recipe
+          </h3>
+          <button @click="closeCreateRecipeModal" class="modal-close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <CreateRecipeForm 
+            :recipe="newRecipe" 
+            :showValidation="showValidation"
+            @updateRecipe="updateRecipe"
+            @submit="handleCreateRecipe"
+          />
+        </div>
+        <div class="modal-footer">
+          <button @click="closeCreateRecipeModal" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button @click="handleCreateRecipe" class="btn btn-primary" :disabled="isCreating">
+            <span v-if="isCreating" class="spinner-border spinner-border-sm me-2"></span>
+            {{ isCreating ? 'Creating...' : 'Create Recipe' }}
+          </button>
+        </div>
+      </div>
+    </div>
     
     <router-view />
   </div>
@@ -103,8 +169,13 @@ import store from '@/store';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import CreateRecipeForm from '@/components/CreateRecipeForm.vue';
+import { MyRecipesAPI } from '@/composables/MyRecipesAPI'; // Use your existing composable
 
 const router = useRouter();
+
+// Use composables
+const { addMyRecipe, isLoading: isCreating } = MyRecipesAPI();
 
 // Reactive state
 const showPersonalDropdown = ref(false);
@@ -112,10 +183,152 @@ const showUserDropdown = ref(false);
 const personalClickedOpen = ref(false);
 const userClickedOpen = ref(false);
 
+// Create Recipe Modal state
+const showCreateRecipeModal = ref(false);
+const showValidation = ref(false);
+
+// Toast state
+const showToast = ref(false);
+const toastMessage = ref('');
+const toastType = ref('success'); // 'success' or 'error'
+
+// New recipe template
+const createEmptyRecipe = () => ({
+  title: '',
+  image: '',
+  readyInMinutes: null,
+  servings: null,
+  vegetarian: false,
+  vegan: false,
+  glutenFree: false,
+  ingredients: [['', '', '']],
+  instructions: '',
+  isFamilyRecipe: false,
+  family_creator: '',
+  family_occasion: '',
+  family_pictures: ['']
+});
+
+const newRecipe = ref(createEmptyRecipe());
+
 // Computed
 const username = computed(() => store.username);
 
-// Methods
+// Toast methods
+const showSuccessToast = () => {
+  toastMessage.value = 'Recipe created successfully!';
+  toastType.value = 'success';
+  showToast.value = true;
+  
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    showToast.value = false;
+  }, 3000);
+};
+
+const showErrorToast = (message) => {
+  toastMessage.value = message;
+  toastType.value = 'error';
+  showToast.value = true;
+  
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    showToast.value = false;
+  }, 4000);
+};
+
+const hideToast = () => {
+  showToast.value = false;
+};
+
+// Create Recipe Modal Methods
+const openCreateRecipeModal = () => {
+  newRecipe.value = createEmptyRecipe();
+  showValidation.value = false;
+  showCreateRecipeModal.value = true;
+  document.body.style.overflow = 'hidden'; // Prevent background scrolling
+};
+
+const closeCreateRecipeModal = () => {
+  showCreateRecipeModal.value = false;
+  showValidation.value = false;
+  newRecipe.value = createEmptyRecipe();
+  document.body.style.overflow = 'auto'; // Restore scrolling
+};
+
+const updateRecipe = (updatedRecipe) => {
+  newRecipe.value = updatedRecipe;
+};
+
+const handleCreateRecipe = async () => {
+  showValidation.value = true;
+  
+  // Validate form
+  const isValid = validateRecipe(newRecipe.value);
+  if (!isValid) {
+    console.log('Form validation failed');
+    return;
+  }
+
+  try {
+    console.log('Creating recipe:', newRecipe.value);
+
+    const recipeId = await addMyRecipe(newRecipe.value);
+    
+    console.log('Recipe created successfully with ID:', recipeId);
+    closeCreateRecipeModal();
+    
+    // Show success toast instead of alert
+    showSuccessToast();
+    
+    // Optionally redirect based on recipe type
+    if (newRecipe.value.isFamilyRecipe) {
+      router.push({ name: 'familia' });
+    } else {
+      router.push({ name: 'personal' });
+    }
+    
+  } catch (error) {
+    console.error('Error creating recipe:', error);
+    // Show error toast instead of alert
+    showErrorToast('Failed to create recipe. Please try again.');
+  }
+};
+
+// Recipe validation
+const validateRecipe = (recipe) => {
+  const isValidUrl = (string) => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const checks = {
+    title: recipe.title && recipe.title.trim() !== '',
+    readyInMinutes: recipe.readyInMinutes && recipe.readyInMinutes > 0,
+    servings: recipe.servings && recipe.servings > 0,
+    ingredients: recipe.ingredients && recipe.ingredients.every(ing => 
+      ing && ing[0] && ing[0].trim() !== '' && 
+      ing[1] && ing[1] > 0 && 
+      ing[2] && ing[2].trim() !== ''
+    ),
+    instructions: recipe.instructions && recipe.instructions.trim() !== '',
+    image: recipe.image && recipe.image.trim() !== '' && isValidUrl(recipe.image),
+    family_creator: !recipe.isFamilyRecipe || (recipe.family_creator && recipe.family_creator.trim() !== ''),
+    family_occasion: !recipe.isFamilyRecipe || (recipe.family_occasion && recipe.family_occasion.trim() !== '')
+  };
+
+  return Object.values(checks).every(check => check);
+};
+
+// Listen for global events to open modal
+const handleGlobalCreateRecipe = () => {
+  openCreateRecipeModal();
+};
+
 const logout = async () => {
   try {
     await axios.post(store.server_domain + '/Logout', {}, { withCredentials: true });
@@ -144,7 +357,6 @@ const togglePersonalDropdown = () => {
     personalClickedOpen.value = true;
     showPersonalDropdown.value = true;
     
-    // Close user dropdown
     userClickedOpen.value = false;
     showUserDropdown.value = false;
   }
@@ -167,7 +379,6 @@ const toggleUserDropdown = () => {
     userClickedOpen.value = true;
     showUserDropdown.value = true;
     
-    // Close personal dropdown
     personalClickedOpen.value = false;
     showPersonalDropdown.value = false;
   }
@@ -182,13 +393,25 @@ const closeDropdowns = (event) => {
   }
 };
 
+// Handle escape key
+const handleEscape = (event) => {
+  if (event.key === 'Escape' && showCreateRecipeModal.value) {
+    closeCreateRecipeModal();
+  }
+};
+
 // Lifecycle
 onMounted(() => {
   document.addEventListener('click', closeDropdowns);
+  document.addEventListener('keydown', handleEscape);
+  window.addEventListener('open-create-recipe-modal', handleGlobalCreateRecipe);
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', closeDropdowns);
+  document.removeEventListener('keydown', handleEscape);
+  document.body.style.overflow = 'auto'; // Ensure scrolling is restored
+  window.removeEventListener('open-create-recipe-modal', handleGlobalCreateRecipe);
 });
 </script>
 
@@ -203,7 +426,7 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
-// Change .navbar to .custom-navbar
+// Navbar styles
 .custom-navbar {
   background: #14b8a6;
   height: 50px;
@@ -218,16 +441,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   height: 100%;
-  width: 100%; // Change from max-width: 1200px to full width
-  margin: 0; // Remove auto centering
-  padding: 0; // Remove padding to make items flush
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .navbar-left {
   display: flex;
   align-items: center;
   gap: 2rem;
-  padding-left: 1rem; // Add padding only to the left content
+  padding-left: 1rem;
 }
 
 .navbar-right {
@@ -235,9 +458,193 @@ onUnmounted(() => {
   align-items: center;
   gap: 1rem;
   margin-left: auto;
-  padding-right: 1rem; // Add padding only to the right content
+  padding-right: 1rem;
 }
 
+// Create Recipe Button Styles
+.create-recipe-section {
+  display: flex;
+  align-items: center;
+}
+
+.create-recipe-btn {
+  background: #059669;
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    background: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  i {
+    font-size: 0.75rem;
+  }
+}
+
+// Toast styles - POSITIONED OUTSIDE NAVBAR
+.toast-container {
+  position: fixed;
+  top: 70px; // Below navbar
+  right: 20px;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.3s ease-in-out;
+}
+
+.toast-container.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+  max-width: 400px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.toast-success {
+  background-color: #d1edff;
+  color: #0a58ca;
+  border-left: 4px solid #0d6efd;
+}
+
+.toast-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.toast-content i {
+  font-size: 16px;
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+// Modal Styles
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 1000px; // Increased from default
+  margin: 0 auto;
+}
+
+.modal-header {
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 1rem;
+  margin-bottom: 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  
+  &:hover {
+    background-color: #f8f9fa;
+    color: #000;
+  }
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: calc(90vh - 140px);
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+// Logo and nav styles
 .navbar-logo {
   .logo-link {
     font-size: 1.25rem !important;
@@ -358,7 +765,7 @@ onUnmounted(() => {
 }
 
 .dropdown-toggle::after {
-  display: none !important; // Remove Bootstrap's default dropdown arrow
+  display: none !important;
 }
 
 .dropdown-arrow {
@@ -441,4 +848,40 @@ onUnmounted(() => {
   }
 }
 
+// Responsive adjustments
+@media (max-width: 768px) {
+  .navbar-left {
+    gap: 1rem;
+  }
+  
+  .create-recipe-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    
+    span {
+      display: none; // Hide text on small screens
+    }
+  }
+  
+  .modal-container {
+    margin: 0.5rem;
+    max-height: 95vh;
+    max-width: 95vw;
+  }
+  
+  .modal-header, .modal-body, .modal-footer {
+    padding: 1rem;
+  }
+  
+  .toast-container {
+    right: 10px;
+    left: 10px;
+    top: 60px; // Adjust for mobile navbar
+  }
+  
+  .toast {
+    min-width: auto;
+    max-width: none;
+  }
+}
 </style>

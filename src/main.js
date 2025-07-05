@@ -1,9 +1,10 @@
 import { createApp } from 'vue';
 import App from './App.vue';
-import routes from './router/index';
+import router from './router/index'; // This imports the router from your router/index.js
 import axios from 'axios';
 import VueAxios from 'vue-axios';
-import { createRouter, createWebHistory } from 'vue-router';
+// Remove this line - you don't need to import createRouter here since you're importing the router instance
+// import { createRouter, createWebHistory } from 'vue-router';
 import { AuthAPI } from '@/composables/AuthAPI'
 
 import 'bootstrap/dist/css/bootstrap.css';
@@ -17,12 +18,13 @@ import Vuelidate from '@vuelidate/core';
 
 import store from './store';
 
-// Router setup
+// Remove this entire section - you already imported the router above
+/*
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes  // <- This 'routes' variable doesn't exist here
 });
-
+*/
 
 // Axios interceptors
 axios.interceptors.request.use((config) => config, (error) => Promise.reject(error));
@@ -32,7 +34,7 @@ axios.interceptors.response.use((response) => response, (error) => Promise.rejec
 const app = createApp(App);
 
 // Plugins
-app.use(router);
+app.use(router); // Use the imported router
 app.use(VueAxios, axios);
 app.use(BootstrapVue3);
 app.use(Vuelidate); 
