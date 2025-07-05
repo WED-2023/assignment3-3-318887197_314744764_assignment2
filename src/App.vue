@@ -366,9 +366,11 @@ const logout = async () => {
     await axios.post(store.server_domain + '/Logout', {}, { withCredentials: true });
     store.logout();
     router.push({ name: 'main' });
+    window.location.href = '/';
   } catch (err) {
     store.logout();
     router.push({ name: 'main' });
+    window.location.href = '/';
   }
 };
 
