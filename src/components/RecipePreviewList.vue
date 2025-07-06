@@ -28,34 +28,45 @@ import RecipePreview from "./RecipePreview.vue";
 
 export default {
   name: "RecipePreviewList",
+
+  // Child components used in this component
   components: { 
     RecipePreview 
   },
+
+  // Props definition - data passed down from parent components
   props: {
+    // Optional title to display above the recipe list
     title: {
       type: String,
       default: ""
     },
+    // Array of recipe objects to display in the list
     recipes: {
       type: Array,
       default: () => []
     },
+    // Array of recipe IDs that the user has already viewed
     watchedRecipeIds: {
       type: Array,
       default: () => []
     },
+    // Array of recipe IDs that the user has liked
     likedRecipeIds: {
       type: Array,
       default: () => []
     },
+    // Array of recipe IDs that the user has marked as favorites
     favoriteRecipeIds: { 
       type: Array,
       default: () => []
     }
   },
+  
+  // Events that this component can emit to parent components
+  // These are passed up from child RecipePreview components
   emits: ['favoriteToggled', 'likeToggled']
 };
-
 </script>
 
 <style scoped>

@@ -1,23 +1,26 @@
 import { reactive } from 'vue';
 
+// Global reactive store for managing application state
 const store = reactive({
+  // User authentication state
   username: null,
   server_domain: "https://localhost:443",
   lastViewedRecipes: [],
   
-  // Add user interaction tracking
+  // User interaction tracking arrays - store IDs as strings
   favoriteRecipeIds: [],
   likedRecipeIds: [],
   watchedRecipeIds: [],
   
-  // Add caching properties
-  mainPageCache: null,
-  cacheTimestamp: null,
-  cacheExpiration: 5 * 60 * 1000, // 5 minutes in milliseconds
-  searchCache: null,
-  searchCacheTimestamp: null,
-  searchCacheParams: null,
+  // Caching properties for performance optimization
+  mainPageCache: null,                    // Cached main page data
+  cacheTimestamp: null,                   // When cache was created
+  cacheExpiration: 5 * 60 * 1000,         // 5 minutes in milliseconds
+  searchCache: null,                      // Cached search results
+  searchCacheTimestamp: null,             // When search cache was created
+  searchCacheParams: null,                // Search parameters that generated cache
 
+  // Manage recently viewed recipes with deduplication
   addLastViewedRecipe(recipe) {
     // Remove if already exists to avoid duplicates
     this.lastViewedRecipes = this.lastViewedRecipes.filter(r => r.id !== recipe.id);
@@ -29,7 +32,7 @@ const store = reactive({
     }
   },
 
-  // User interaction methods
+  // User interaction methods - manage favorites
   addToFavorites(recipeId) {
     if (!this.favoriteRecipeIds.includes(recipeId)) {
       this.favoriteRecipeIds.push(recipeId);
@@ -42,6 +45,7 @@ const store = reactive({
     console.log('Store: Removed from favorites:', recipeId);
   },
 
+  // User interaction methods - manage likes
   addToLiked(recipeId) {
     if (!this.likedRecipeIds.includes(recipeId)) {
       this.likedRecipeIds.push(recipeId);
@@ -54,7 +58,7 @@ const store = reactive({
     console.log('Store: Removed from liked:', recipeId);
   },
 
-  // Keep only ONE toggleLike method
+  // Toggle like status and return new state
   toggleLike(recipeId) {
     const index = this.likedRecipeIds.indexOf(recipeId);
     if (index > -1) {
@@ -68,6 +72,7 @@ const store = reactive({
     }
   },
 
+  // Track watched recipes for user history
   addToWatched(recipeId) {
     if (!this.watchedRecipeIds.includes(recipeId)) {
       this.watchedRecipeIds.push(recipeId);
@@ -75,7 +80,7 @@ const store = reactive({
     }
   },
 
-  // Cache management methods
+  // Cache management methods for main page performance
   getCachedMainPageData() {
     // Check if cache exists and is not expired
     if (this.mainPageCache && this.cacheTimestamp) {
@@ -95,6 +100,7 @@ const store = reactive({
     return null;
   },
 
+  // Store main page data with timestamp for expiration tracking
   cacheMainPageData(randomRecipes, lastViewedRecipes, blurredRandomRecipes, watchedRecipeIds) {
     console.log('Store: Caching main page data');
     this.mainPageCache = {
@@ -106,18 +112,20 @@ const store = reactive({
     this.cacheTimestamp = Date.now();
   },
 
+  // Clear main page cache data
   clearMainPageCache() {
     console.log('Store: Clearing main page cache');
     this.mainPageCache = null;
     this.cacheTimestamp = null;
   },
 
+  // Force invalidate cache when user performs actions
   invalidateMainPageCache() {
     console.log('Store: Invalidating main page cache (user action)');
     this.clearMainPageCache();
   },
 
-  // Helper method to check if cache is valid
+  // Helper method to check if cache is valid without retrieving data
   isCacheValid() {
     if (!this.mainPageCache || !this.cacheTimestamp) {
       return false;
@@ -127,6 +135,7 @@ const store = reactive({
     return (now - this.cacheTimestamp) <= this.cacheExpiration;
   },
 
+  // Search cache management - no expiration, only manual clearing
   getCachedSearchData() {
     if (this.searchCache && this.searchCacheTimestamp) {
       console.log('Store: Returning cached search data');
@@ -141,6 +150,7 @@ const store = reactive({
     return null;
   },
 
+  // Store search results with parameters for comparison
   cacheSearchData(searchResults, searchParams) {
     console.log('Store: Caching search data');
     this.searchCache = searchResults || [];
@@ -148,6 +158,7 @@ const store = reactive({
     this.searchCacheTimestamp = Date.now();
   },
 
+  // Clear search cache data
   clearSearchCache() {
     console.log('Store: Clearing search cache');
     this.searchCache = null;
@@ -155,12 +166,13 @@ const store = reactive({
     this.searchCacheParams = null;
   },
 
+  // Force invalidate search cache
   invalidateSearchCache() {
     console.log('Store: Invalidating search cache (user action)');
     this.clearSearchCache();
   },
 
-  // Add a method to initialize user data
+  // Initialize user data from API responses on login
   initializeUserData(favoriteIds = [], likedIds = [], watchedIds = []) {
     console.log('Store: Initializing user data');
     this.favoriteRecipeIds = favoriteIds.map(id => String(id));
@@ -168,6 +180,7 @@ const store = reactive({
     this.watchedRecipeIds = watchedIds.map(id => String(id));
   },
 
+  // Complete logout cleanup - clear all user data and caches
   logout() {
     console.log('Store: User logging out, clearing all data');
     this.username = null;

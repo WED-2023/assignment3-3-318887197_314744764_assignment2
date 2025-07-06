@@ -91,25 +91,29 @@ import { AuthAPI } from '@/composables/AuthAPI';
 import { FavoritesAPI } from '@/composables/FavoritesAPI';
 import { LikesAPI } from '@/composables/LikesAPI';
 
+// Router instance for navigation after successful login
 const router = useRouter();
 
-// Use composables
+// Use composables for API operations
 const { login, isLoading: authLoading, error: authError } = AuthAPI();
 const { getFavorites } = FavoritesAPI();
 const { getLiked } = LikesAPI();
 
-// Reactive data
+// Reactive data for form fields
 const loginForm = reactive({
   username: '',
   password: ''
 });
 
+// Track which fields have been touched by user for validation display
 const touchedFields = reactive({
   username: false,
   password: false
 });
 
+// Toggle password visibility
 const showPassword = ref(false);
+// Store login-specific error messages
 const loginError = ref('');
 
 // Validation helper functions
@@ -126,7 +130,7 @@ const isPasswordValid = () => {
          loginForm.password.length <= 10;
 };
 
-// Validation class functions
+// Validation class functions for Bootstrap styling
 const getUsernameValidationClass = () => {
   if (!touchedFields.username && !loginForm.username) return '';
   

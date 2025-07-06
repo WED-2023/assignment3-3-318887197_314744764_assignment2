@@ -1,4 +1,5 @@
 <template>
+  <!-- Display favorite recipes using the reusable RecipePage component -->
   <RecipePage
     title="My Favorite Recipes"
     description="All the recipes you've saved as favorites."
@@ -24,17 +25,18 @@ import { RecipeAPI } from '@/composables/RecipeAPI';
 import { FavoritesAPI } from '@/composables/FavoritesAPI';
 import { UserData } from '@/composables/UserData';
 
+// Router instance for navigation
 const router = useRouter();
 
 // Use composables
-const { getRecipeInfo } = RecipeAPI();
-const { getFavorites } = FavoritesAPI();
-const { watchedRecipeIds, likedRecipeIds, favoriteRecipeIds, fetchUserData } = UserData();
+const { getRecipeInfo } = RecipeAPI();                      // Get detailed recipe information
+const { getFavorites } = FavoritesAPI();                    // Get user's favorite recipe IDs
+const { watchedRecipeIds, likedRecipeIds, favoriteRecipeIds, fetchUserData } = UserData();  // User interaction data
 
 // Reactive data
-const recipes = ref([]);
-const isLoading = ref(false);
-const error = ref('');
+const recipes = ref([]);        // Array to store favorite recipes with full details
+const isLoading = ref(false);   // Loading state for API operations
+const error = ref('');          // Error message storage
 
 // Check auth
 if (!store.username) {
@@ -55,7 +57,7 @@ const handleFavoriteToggled = (event) => {
   } else {
     // Remove from favorites and from the displayed list
     favoriteRecipeIds.value = favoriteRecipeIds.value.filter(id => String(id) !== String(recipeId));
-
+    // Recipe remains visible in the list until page refresh
   }
 };
 
@@ -92,6 +94,7 @@ const fetchFavoriteRecipes = async () => {
 
     // Fetch full recipe details
     if (favoriteIds.length > 0) {
+      // Create promises for fetching each recipe's details
       const recipePromises = favoriteIds.map(async (recipeId) => {
         try {
           const recipeData = await getRecipeInfo(recipeId);
@@ -105,7 +108,9 @@ const fetchFavoriteRecipes = async () => {
         }
       });
       
+      // Wait for all recipe fetches to complete
       const fetchedRecipes = await Promise.all(recipePromises);
+      // Filter out failed fetches
       recipes.value = fetchedRecipes.filter(recipe => recipe !== null);
     } else {
       recipes.value = [];
@@ -127,6 +132,7 @@ const fetchFavoriteRecipes = async () => {
   }
 };
 
+// Initialize data when component mounts
 onMounted(() => {
   fetchFavoriteRecipes();
 });

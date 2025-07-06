@@ -123,13 +123,14 @@ import RecipePreview from '@/components/RecipePreview.vue';
 const { getRandomRecipes, getRecipeInfo, isLoading: randomLoading } = RecipeAPI();
 const { getRecentWatched, isLoading: lastViewedLoading, error: lastViewedError } = WatchedAPI();
 const { favoriteRecipeIds, likedRecipeIds, watchedRecipeIds: userWatchedIds, fetchUserData, fetchUserPreferencesOnly } = UserData();
-// Reactive data
-const randomRecipes = ref([]);
-const lastViewedRecipes = ref([]);
-const blurredRandomRecipes = ref([]);
-const localWatchedRecipeIds = ref([]);
-const blurredRandomLoading = ref(false);
-const isRefreshing = ref(false);
+
+// Reactive data for managing different recipe lists and loading states
+const randomRecipes = ref([]);                    // Array of random recipes for left column
+const lastViewedRecipes = ref([]);               // Array of recently viewed recipes for logged-in users
+const blurredRandomRecipes = ref([]);            // Array of blurred recipes for non-logged-in users
+const localWatchedRecipeIds = ref([]);           // Local copy of watched recipe IDs
+const blurredRandomLoading = ref(false);         // Loading state for blurred recipes section
+const isRefreshing = ref(false);                 // Loading state for refresh button
 
 // Create local error variable controlled only by MainPage
 const mainPageRandomError = ref('');
@@ -183,7 +184,8 @@ const handleLikeToggled = (event) => {
     likedRecipeIds.value = likedRecipeIds.value.filter(id => id !== String(recipeId));
   }
 
-    const updateLikes = (recipes) => {
+  // Helper function to update like counts in recipe lists
+  const updateLikes = (recipes) => {
     const recipe = recipes.find(r => String(r.id) === String(recipeId));
     if (recipe) {
       if (typeof recipe.aggregateLikes === 'number') {

@@ -57,61 +57,74 @@
 <script setup>
 import RecipePreviewList from './RecipePreviewList.vue';
 
-// Props
+// Component props definition - all the data and configuration this component needs
 defineProps({
+  // Main page title displayed at the top
   title: {
     type: String,
     required: true
   },
+  // Optional description text shown below the title
   description: {
     type: String,
     default: ''
   },
+  // Array of recipe objects to display
   recipes: {
     type: Array,
     default: () => []
   },
+  // Array of recipe IDs that user has already viewed
   watchedRecipeIds: {
     type: Array,
     default: () => []
   },
+  // Array of recipe IDs that user has liked
   likedRecipeIds: {
     type: Array,
     default: () => []
   },
+  // Array of recipe IDs that user has marked as favorites
   favoriteRecipeIds: {
     type: Array,
     default: () => []
   },
+  // Loading state flag to show spinner
   isLoading: {
     type: Boolean,
     default: false
   },
+  // Error message to display when something goes wrong
   error: {
     type: String,
     default: ''
   },
+  // Custom message to show when no recipes are found
   emptyMessage: {
     type: String,
     default: ''
   },
+  // Override title for the recipe list if different from page title
   listTitle: {
     type: String,
     default: ''
   },
+  // Function to call when user clicks retry button after error
   onRetry: {
     type: Function,
     default: null
   }
 });
 
+// Events that this component can emit to parent components
 const emit = defineEmits(['favoriteToggled', 'likeToggled']);
 
-// Event handlers
+// Handle when user toggles favorite status on a recipe
 const handleFavoriteToggled = (event) => {
   emit('favoriteToggled', event);
 };
 
+// Handle when user toggles like status on a recipe
 const handleLikeToggled = (event) => {
   emit('likeToggled', event);
 };
@@ -237,25 +250,5 @@ const handleLikeToggled = (event) => {
   margin-top: 2rem;
   padding-top: 2rem;
   border-top: 1px solid #e5e7eb;
-}
-
-@media (max-width: 768px) {
-  .page-title {
-    font-size: 2rem;
-  }
-  
-  .page-description {
-    font-size: 1rem;
-  }
-  
-  .recipe-page {
-    padding: 1rem 0;
-  }
-  
-  .loading-state,
-  .error-state,
-  .empty-state {
-    padding: 2rem 1rem;
-  }
 }
 </style>

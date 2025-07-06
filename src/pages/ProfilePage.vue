@@ -127,33 +127,34 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import store from '@/store';
 
-// Reactive data
-const userProfile = ref(null);
-const isLoading = ref(true);
-const error = ref('');
+// Reactive data for managing profile page state
+const userProfile = ref(null);          // Stores the user's profile information from API
+const isLoading = ref(true);            // Loading state for profile data fetch
+const error = ref('');                  // Error message if profile fetch fails
 
 // Fetch user profile from /me endpoint
 const fetchUserProfile = async () => {
   try {
-    isLoading.value = true;
-    error.value = '';
+    isLoading.value = true;             // Show loading spinner
+    error.value = '';                   // Clear any previous errors
     
+    // Make authenticated request to get user profile data
     const response = await axios.get(store.server_domain + '/me', {
-      withCredentials: true
+      withCredentials: true             // Include cookies for authentication
     });
     
     console.log('User profile data:', response.data);
-    userProfile.value = response.data;
+    userProfile.value = response.data;  // Store profile data in reactive variable
     
   } catch (err) {
     console.error('Error fetching user profile:', err);
     error.value = 'Failed to load profile information. Please try again.';
   } finally {
-    isLoading.value = false;
+    isLoading.value = false;            // Hide loading spinner regardless of success/failure
   }
 };
 
-// Lifecycle
+// fetch profile data when component mounts
 onMounted(() => {
   fetchUserProfile();
 });

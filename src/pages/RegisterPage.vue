@@ -224,15 +224,16 @@ import { useRouter } from 'vue-router';
 import { AuthAPI } from '@/composables/AuthAPI';
 import rawCountries from '@/assets/countries';
 
+// Router instance for navigation after successful registration
 const router = useRouter();
 
 // Use composables
 const { register, isLoading: authLoading, error: authError } = AuthAPI();
 
-// Countries list
+// Countries list - process raw country data and sort alphabetically
 const countries = rawCountries.map(c => c.name.common).sort((a, b) => a.localeCompare(b));
 
-// Reactive data
+// Reactive data for form fields
 const registerForm = reactive({
   username: '',
   firstname: '',
@@ -243,6 +244,7 @@ const registerForm = reactive({
   confirmPassword: ''
 });
 
+// Track which fields have been touched by user for validation display
 const touchedFields = reactive({
   username: false,
   firstname: false,
@@ -253,11 +255,12 @@ const touchedFields = reactive({
   confirmPassword: false
 });
 
-const usernameExistsError = ref('');
-const successMessage = ref('');
-const showPassword = ref(false);
-const showConfirmPassword = ref(false);
-const showValidationSummary = ref(false);
+// Additional state variables
+const usernameExistsError = ref('');        // Specific error for username conflicts
+const successMessage = ref('');             // Success message after registration
+const showPassword = ref(false);            // Toggle password visibility
+const showConfirmPassword = ref(false);     // Toggle confirm password visibility
+const showValidationSummary = ref(false);   // Show validation summary alert
 
 // Validation helper functions
 const isUsernameValid = () => {
@@ -296,7 +299,7 @@ const isConfirmPasswordValid = () => {
   return registerForm.confirmPassword && registerForm.confirmPassword === registerForm.password;
 };
 
-// Validation class functions
+// Validation class functions for Bootstrap styling
 const getUsernameValidationClass = () => {
   if (!touchedFields.username && !registerForm.username) return '';
   if (usernameExistsError.value) return 'is-invalid';
@@ -354,7 +357,7 @@ const getConfirmPasswordValidationClass = () => {
   return '';
 };
 
-// Computed validation errors for summary
+// Computed validation errors for summary display
 const validationErrors = computed(() => {
   const errors = [];
   

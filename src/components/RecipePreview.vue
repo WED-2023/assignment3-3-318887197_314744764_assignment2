@@ -86,35 +86,44 @@ import store from '@/store';
 import { FavoritesAPI } from '@/composables/FavoritesAPI';
 import { LikesAPI } from '@/composables/LikesAPI';
 
+// Component props - defines what data this recipe card needs to display and function
 const props = defineProps({
+  // The recipe object containing all recipe data (title, image, time, etc.)
   recipe: {
     type: Object,
     required: true
   },
+  // Whether to blur the recipe card (used for non-premium users)
   isBlurred: {
     type: Boolean,
     default: false
   },
+  // Whether the recipe card should be clickable to navigate to full recipe
   isClickable: {
     type: Boolean,
     default: true
   },
+  // Array of recipe IDs that the user has already viewed
   watchedRecipeIds: {
     type: Array,
     default: () => []
   },
+  // Array of recipe IDs that the user has marked as favorites
   favoriteRecipeIds: {
     type: Array,
     default: () => []
   },
+  // Array of recipe IDs that the user has liked
   likedRecipeIds: {
     type: Array,
     default: () => []
   }
 });
 
+// Events that this component can emit to parent components
 const emit = defineEmits(['favoriteToggled', 'likeToggled']);
 
+// Router instance for navigation (e.g., redirecting to login if not authenticated)
 const router = useRouter();
 
 // Use composables (only for API calls, not for data fetching)
@@ -126,7 +135,7 @@ const isWatched = computed(() => props.watchedRecipeIds.includes(String(props.re
 const isFavorite = computed(() => props.favoriteRecipeIds.includes(String(props.recipe.id)));
 const isLiked = computed(() => props.likedRecipeIds.includes(String(props.recipe.id)));
 
-// Methods
+// Handle when user clicks the favorite button (star icon)
 const handleToggleFavorite = async () => {
   if (!store.username) {
     router.push({ name: 'login' });
@@ -134,9 +143,10 @@ const handleToggleFavorite = async () => {
   }
 
   try {
+    // Call the API to toggle favorite status
     const success = await toggleFavorite(props.recipe.id, isFavorite.value);
     if (success) {
-      // Emit event to parent to update the data
+      // Notify parent component about the change so it can update its data
       emit('favoriteToggled', {
         recipeId: props.recipe.id,
         newState: !isFavorite.value
@@ -147,16 +157,19 @@ const handleToggleFavorite = async () => {
   }
 };
 
+// Handle when user clicks the like button (heart icon)
 const handleToggleLike = async () => {
   if (!store.username) {
+    // Redirect to login if user is not authenticated
     router.push({ name: 'login' });
     return;
   }
 
   try {
+    // Call the API to toggle like status
     const success = await toggleLiked(props.recipe.id, isLiked.value);
     if (success) {
-      // Emit event to parent to update the data
+      // Notify parent component about the change so it can update its data
       emit('likeToggled', {
         recipeId: props.recipe.id,
         newState: !isLiked.value

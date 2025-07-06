@@ -172,27 +172,28 @@ import { useRouter } from 'vue-router';
 import CreateRecipeForm from '@/components/CreateRecipeForm.vue';
 import { MyRecipesAPI } from '@/composables/MyRecipesAPI'; // Use your existing composable
 
+// Router instance for navigation after recipe creation
 const router = useRouter();
 
 // Use composables
 const { addMyRecipe, isLoading: isCreating } = MyRecipesAPI();
 
-// Reactive state
-const showPersonalDropdown = ref(false);
-const showUserDropdown = ref(false);
-const personalClickedOpen = ref(false);
-const userClickedOpen = ref(false);
+// Reactive state for dropdown management
+const showPersonalDropdown = ref(false);        // Controls Personal dropdown visibility
+const showUserDropdown = ref(false);            // Controls User dropdown visibility
+const personalClickedOpen = ref(false);         // Tracks if Personal dropdown was clicked open
+const userClickedOpen = ref(false);             // Tracks if User dropdown was clicked open
 
 // Create Recipe Modal state
-const showCreateRecipeModal = ref(false);
-const showValidation = ref(false);
+const showCreateRecipeModal = ref(false);       // Controls modal visibility
+const showValidation = ref(false);              // Controls form validation display
 
-// Toast state
-const showToast = ref(false);
-const toastMessage = ref('');
-const toastType = ref('success'); // 'success' or 'error'
+// Toast notification state
+const showToast = ref(false);                   // Controls toast visibility
+const toastMessage = ref('');                   // Toast message content
+const toastType = ref('success');               // Toast type: 'success' or 'error'
 
-// New recipe template
+// New recipe template - returns empty recipe object
 const createEmptyRecipe = () => ({
   title: '',
   image: '',
@@ -209,12 +210,13 @@ const createEmptyRecipe = () => ({
   family_pictures: ['']
 });
 
+// Reactive reference to new recipe being created
 const newRecipe = ref(createEmptyRecipe());
 
-// Computed
+// Computed property to get username from store
 const username = computed(() => store.username);
 
-// Toast methods
+// Toast notification methods
 const showSuccessToast = () => {
   toastMessage.value = 'Recipe created successfully!';
   toastType.value = 'success';
@@ -327,7 +329,7 @@ const handleCreateRecipe = async () => {
   }
 };
 
-// Recipe validation
+// Recipe validation function - checks all required fields
 const validateRecipe = (recipe) => {
   const isValidUrl = (string) => {
     try {
@@ -361,6 +363,7 @@ const handleGlobalCreateRecipe = () => {
   openCreateRecipeModal();
 };
 
+// User logout function with proper cleanup
 const logout = async () => {
   try {
     await axios.post(store.server_domain + '/Logout', {}, { withCredentials: true });
@@ -374,7 +377,7 @@ const logout = async () => {
   }
 };
 
-// Personal dropdown handlers
+// Personal dropdown handlers - manage hover vs click interactions
 const handlePersonalHover = (isHovering) => {
   if (personalClickedOpen.value) {
     return;
@@ -396,7 +399,7 @@ const togglePersonalDropdown = () => {
   }
 };
 
-// User dropdown handlers
+// User dropdown handlers - manage hover vs click interactions
 const handleUserHover = (isHovering) => {
   if (userClickedOpen.value) {
     return;
@@ -418,6 +421,7 @@ const toggleUserDropdown = () => {
   }
 };
 
+// Close dropdowns when clicking outside
 const closeDropdowns = (event) => {
   if (!event.target.closest('.dropdown')) {
     personalClickedOpen.value = false;
@@ -427,14 +431,14 @@ const closeDropdowns = (event) => {
   }
 };
 
-// Handle escape key
+// Handle escape key to close modal
 const handleEscape = (event) => {
   if (event.key === 'Escape' && showCreateRecipeModal.value) {
     closeCreateRecipeModal();
   }
 };
 
-// Lifecycle
+// setup and cleanup event listeners
 onMounted(() => {
   document.addEventListener('click', closeDropdowns);
   document.addEventListener('keydown', handleEscape);

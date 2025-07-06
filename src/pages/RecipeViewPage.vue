@@ -123,6 +123,7 @@ import { WatchedAPI } from '@/composables/WatchedAPI';
 
 export default {
   setup() {
+    // Initialize composables and destructure their functions
     const { getRecipeInfo } = RecipeAPI();
     const { getFavorites, toggleFavorite, isLoading: favoritesLoading } = FavoritesAPI();
     const { getLiked, toggleLiked, isLoading: likedLoading } = LikesAPI();
@@ -141,20 +142,22 @@ export default {
   },
   data() {
     return {
-      recipe: null,
-      isFavorite: false,
-      isLiked: false,
-      showFavoriteTooltip: false,
-      showLikeTooltip: false,
-      showDebug: false,
-      store: store
+      recipe: null,                    // Stores the complete recipe data
+      isFavorite: false,               // Tracks if current user has favorited this recipe
+      isLiked: false,                  // Tracks if current user has liked this recipe
+      showFavoriteTooltip: false,      // Controls favorite button tooltip visibility
+      showLikeTooltip: false,          // Controls like button tooltip visibility
+      showDebug: false,                // Debug mode toggle (unused)
+      store: store                     // Reference to global store
     };
   },
   async created() {
     try {
+      // Get recipe ID from route parameters
       const recipeId = this.$route.params.recipeId;
       console.log('RecipeViewPage: Recipe ID from route params:', recipeId);
       
+      // Validate recipe ID exists and is valid
       if (!recipeId || recipeId === 'undefined' || recipeId === 'null') {
         console.error('Invalid recipe ID:', recipeId);
         throw new Error('No valid recipe ID provided');
@@ -164,6 +167,7 @@ export default {
       const recipeData = await this.getRecipeInfo(recipeId);
       console.log('RecipeViewPage: Received recipe data:', recipeData);
       
+      // Destructure recipe data with fallback values
       let {
         analyzedInstructions,
         instructions,
@@ -178,9 +182,10 @@ export default {
         servings
       } = recipeData;
 
-      // Process instructions
+      // Process instructions - convert string to structured format
       let _instructions = [];
       if (typeof instructions === "string" && instructions.trim() !== "") {
+        // Remove HTML tags and split into steps
         const plainInstructions = instructions.replace(/<[^>]+>/g, '');
         _instructions = plainInstructions
           .split(/\n|\.(?!\d)/)
@@ -188,23 +193,27 @@ export default {
           .filter((s) => s.step.length > 0);
       }
 
-      // Process ingredients - handle different formats
+      // Process ingredients - handle different formats from API
       let _ingredients = [];
       if (Array.isArray(ingredients)) {
         _ingredients = ingredients.map(ingredient => {
           if (Array.isArray(ingredient)) {
+            // Handle ingredients that come as arrays
             return { original: ingredient.filter(Boolean).join(" ") };
           } else if (typeof ingredient === 'string') {
+            // Handle ingredients that come as strings
             return { original: ingredient };
           } else if (ingredient && ingredient.original) {
+            // Handle ingredients that already have original property
             return ingredient;
           } else {
+            // Handle any other format
             return { original: String(ingredient || '') };
           }
         }).filter(ing => ing.original.trim() !== '');
       }
 
-      // Build recipe object with explicit ID
+      // Build recipe object with explicit ID and processed data
       this.recipe = {
         id: String(recipeId),
         instructions,
@@ -236,14 +245,17 @@ export default {
 
     } catch (error) {
       console.error('RecipeViewPage: Error in created():', error);
+      // Redirect to 404 page if recipe loading fails
       this.$router.replace("/NotFound");
     }
   },
   methods: {
     async checkIfFavorite() {
       try {
+        // Get user's favorite recipe IDs
         const favoriteIds = await this.getFavorites();
         const recipeId = this.$route.params.recipeId;
+        // Check if current recipe is in favorites
         this.isFavorite = favoriteIds.includes(String(recipeId));
         console.log('RecipeViewPage: Is favorite check:', this.isFavorite);
       } catch (error) {
@@ -253,8 +265,10 @@ export default {
 
     async checkIfLiked() {
       try {
+        // Get user's liked recipe IDs
         const likedIds = await this.getLiked();
         const recipeId = this.$route.params.recipeId;
+        // Check if current recipe is liked
         this.isLiked = likedIds.includes(String(recipeId));
         console.log('RecipeViewPage: Is liked check:', this.isLiked);
       } catch (error) {
@@ -263,6 +277,7 @@ export default {
     },
 
     async handleToggleFavorite() {
+      // Redirect to login if user is not authenticated
       if (!store.username) {
         this.$router.push({ name: 'login' });
         return;
@@ -272,6 +287,7 @@ export default {
       this.showFavoriteTooltip = false;
 
       try {
+        // Toggle favorite status via API
         const success = await this.toggleFavorite(recipeId, this.isFavorite);
         if (success) {
           this.isFavorite = !this.isFavorite;
@@ -294,6 +310,7 @@ export default {
     },
 
     async handleToggleLike() {
+      // Redirect to login if user is not authenticated
       if (!store.username) {
         this.$router.push({ name: 'login' });
         return;
@@ -303,6 +320,7 @@ export default {
       this.showLikeTooltip = false;
 
       try {
+        // Toggle like status via API
         const success = await this.toggleLiked(recipeId, this.isLiked);
         if (success) {
           this.isLiked = !this.isLiked;
@@ -337,8 +355,10 @@ export default {
 
     // Add this new method to update search cache
     updateSearchCache(recipeId, isLiked) {
+      // Get cached search results from store
       const cachedSearch = store.getCachedSearchData();
       if (cachedSearch && cachedSearch.results) {
+        // Find the recipe in cached results
         const recipe = cachedSearch.results.find(r => r.id == recipeId);
         if (recipe) {
           console.log('RecipeViewPage: Updating search cache for recipe:', recipeId);

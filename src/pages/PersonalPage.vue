@@ -90,21 +90,22 @@ import { RecipeAPI } from '@/composables/RecipeAPI';
 import { MyRecipesAPI } from '@/composables/MyRecipesAPI';
 import { UserData } from '@/composables/UserData';
 
+// Router instance for navigation
 const router = useRouter();
 
 // Use composables
-const { getRecipeInfo } = RecipeAPI();
-const { getMyRecipes, addMyRecipe } = MyRecipesAPI();
-const { watchedRecipeIds, likedRecipeIds, favoriteRecipeIds, fetchUserData } = UserData();
+const { getRecipeInfo } = RecipeAPI();                      // Get detailed recipe information
+const { getMyRecipes, addMyRecipe } = MyRecipesAPI();       // Personal recipe management
+const { watchedRecipeIds, likedRecipeIds, favoriteRecipeIds, fetchUserData } = UserData();  // User interaction data
 
 // Reactive data
-const recipes = ref([]);
-const isLoading = ref(false);
-const error = ref('');
-const showCreateModal = ref(false);
-const isCreating = ref(false);
-const showValidation = ref(false);
-const recipeFormRef = ref(null);
+const recipes = ref([]);                                    // Array of personal recipes
+const isLoading = ref(false);                              // Loading state for API calls
+const error = ref('');                                     // Error message storage
+const showCreateModal = ref(false);                        // Modal visibility control
+const isCreating = ref(false);                             // Creation process loading state
+const showValidation = ref(false);                         // Form validation display control
+const recipeFormRef = ref(null);                           // Reference to form component
 
 // New recipe form data
 const newRecipe = ref({
@@ -117,10 +118,10 @@ const newRecipe = ref({
   ingredients: [['', '', '']], // Change to array format
   instructions: '',
   image: '',
-  isFamilyRecipe: false,        // ADD THIS
+  isFamilyRecipe: false,     
   family_creator: '',
   family_occasion: '',
-  family_pictures: ['']         // ADD THIS
+  family_pictures: ['']      
 });
 
 // Get validation state from form component
@@ -128,7 +129,7 @@ const isFormValid = computed(() => {
   return recipeFormRef.value?.isFormValid || false;
 });
 
-// Check auth
+// Check auth - redirect to login if not authenticated
 if (!store.username) {
   router.push({ name: 'login' });
 }
@@ -139,10 +140,12 @@ const handleFavoriteToggled = (event) => {
   console.log('PersonalPage: Favorite toggled', { recipeId, newState });
   
   if (newState) {
+    // Add to favorites if not already there
     if (!favoriteRecipeIds.value.includes(String(recipeId))) {
       favoriteRecipeIds.value.push(String(recipeId));
     }
   } else {
+    // Remove from favorites
     favoriteRecipeIds.value = favoriteRecipeIds.value.filter(id => String(id) !== String(recipeId));
   }
 };
@@ -152,10 +155,12 @@ const handleLikeToggled = (event) => {
   console.log('PersonalPage: Like toggled', { recipeId, newState });
   
   if (newState) {
+    // Add to likes if not already there
     if (!likedRecipeIds.value.includes(String(recipeId))) {
       likedRecipeIds.value.push(String(recipeId));
     }
   } else {
+    // Remove from likes
     likedRecipeIds.value = likedRecipeIds.value.filter(id => String(id) !== String(recipeId));
   }
 
@@ -184,10 +189,10 @@ const resetForm = () => {
     ingredients: [['', '', '']], // Change to array format
     instructions: '',
     image: '',
-    isFamilyRecipe: false,      // ADD THIS
+    isFamilyRecipe: false,    
     family_creator: '',
     family_occasion: '',
-    family_pictures: ['']       // ADD THIS
+    family_pictures: ['']       
   };
   showValidation.value = false;
 };
@@ -195,6 +200,7 @@ const resetForm = () => {
 const createRecipe = async () => {
   showValidation.value = true;
   
+  // Exit early if form is invalid
   if (!isFormValid.value) {
     return;
   }
@@ -210,6 +216,7 @@ const createRecipe = async () => {
       glutenFree: newRecipe.value.glutenFree,
       vegan: newRecipe.value.vegan,
       vegetarian: newRecipe.value.vegetarian,
+      // Filter out empty ingredients and clean up the data
       ingredients: newRecipe.value.ingredients
         .filter(ing => ing[0] && ing[0].trim() !== '' && ing[1] && ing[1] > 0)
         .map(ing => [
@@ -233,6 +240,7 @@ const createRecipe = async () => {
     closeModal();
     await fetchPersonalRecipes();
 
+    // Navigate to appropriate page based on recipe type
     if (recipeData.isFamilyRecipe) {
       router.push({ name: 'familia' });
     } else {
@@ -272,6 +280,7 @@ const fetchPersonalRecipes = async () => {
         }
       });
       
+      // Wait for all recipe fetches to complete
       const fetchedRecipes = await Promise.all(recipePromises);
       recipes.value = fetchedRecipes.filter(recipe => recipe !== null);
     } else {
@@ -294,6 +303,7 @@ const fetchPersonalRecipes = async () => {
   }
 };
 
+// Initialize data when component mounts
 onMounted(() => {
   fetchPersonalRecipes();
 });

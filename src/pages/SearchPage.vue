@@ -124,16 +124,17 @@ import { LikesAPI } from '@/composables/LikesAPI';
 import RecipePreview from '@/components/RecipePreview.vue';
 import store from '@/store';
 
-// Use composables
+// Use composables for API operations
 const { searchRecipes, getRecipeInfo, isLoading: searchLoading, error: searchError } = RecipeAPI();
 const { getFavorites } = FavoritesAPI();
 const { getLiked } = LikesAPI();
 
-// Reactive data
-const searchResults = ref([]);
-const hasSearched = ref(false);
-const sortBy = ref('default');
+// Reactive data for search functionality
+const searchResults = ref([]);                    // Array of search results
+const hasSearched = ref(false);                   // Track if user has performed a search
+const sortBy = ref('default');                    // Current sort option for results
 
+// Search form data with all possible search parameters
 const searchForm = reactive({
   title: '',
   cuisine: '',
@@ -142,7 +143,7 @@ const searchForm = reactive({
   amount: 5
 });
 
-// Add function to load user data
+// Load user's personal data (favorites and likes) for display
 const loadUserData = async () => {
   if (!store.username) {
     console.log('SearchPage: No user logged in, skipping user data load');
@@ -170,8 +171,7 @@ const loadUserData = async () => {
   }
 };
 
-
-// Helper function to compare search parameters
+// Helper function to compare search parameters for caching
 const areSearchParamsEqual = (params1, params2) => {
   if (!params1 || !params2) return false;
   
@@ -194,6 +194,7 @@ const areSearchParamsEqual = (params1, params2) => {
   return true;
 };
 
+// Computed property for sorted search results
 const sortedResults = computed(() => {
   if (!searchResults.value || searchResults.value.length === 0) return [];
   
@@ -219,8 +220,7 @@ const sortedResults = computed(() => {
   }
 });
 
-// Event handlers for user interactions
-// Update your event handlers to match the emitted events:
+// Event handlers for user interactions with recipes
 const handleLikeToggled = (event) => {
   console.log('SearchPage: Like toggled:', event);
   
@@ -255,6 +255,7 @@ const handleFavoriteToggled = (event) => {
   searchResults.value = [...searchResults.value];
 };
 
+// Main search function with caching support
 const handleSearch = async () => {
   hasSearched.value = true;
   sortBy.value = 'default';
@@ -321,7 +322,7 @@ const handleSearch = async () => {
   }
 };
 
-// Load cached search on mount
+// Load cached search on mount and initialize user data
 onMounted(async () => {
   console.log('SearchPage: onMounted called');
 

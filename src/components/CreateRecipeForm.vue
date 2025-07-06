@@ -320,6 +320,7 @@
 <script setup>
 import { computed } from 'vue';
 
+// Component props - recipe data and validation state
 const props = defineProps({
   recipe: {
     type: Object,
@@ -331,6 +332,7 @@ const props = defineProps({
   }
 });
 
+// Component events
 const emit = defineEmits(['submit', 'showValidation', 'updateRecipe']);
 
 // URL validation helper
@@ -359,7 +361,7 @@ const validation = computed(() => ({
     ing && ing[0] && ing[0].trim() !== '' && 
     ing[1] && ing[1] > 0 && 
     ing[2] && ing[2].trim() !== ''
-  ), // Changed from .some() to .every() to validate ALL ingredients
+  ), 
   instructions: props.recipe.instructions && props.recipe.instructions.trim() !== '',
   image: props.recipe.image && props.recipe.image.trim() !== '' && isValidUrl(props.recipe.image),
   family_creator: !props.recipe.isFamilyRecipe || (props.recipe.family_creator && props.recipe.family_creator.trim() !== ''),
@@ -415,11 +417,13 @@ const updateIngredientField = (index, fieldIndex, value) => {
   emit('updateRecipe', { ...props.recipe, ingredients: newIngredients });
 };
 
+// Add new empty ingredient row
 const addIngredient = () => {
   const newIngredients = [...props.recipe.ingredients, ['', '', '']];
   emit('updateRecipe', { ...props.recipe, ingredients: newIngredients });
 };
 
+// Remove ingredient at specific index
 const removeIngredient = (index) => {
   if (props.recipe.ingredients.length > 1) {
     const newIngredients = props.recipe.ingredients.filter((_, i) => i !== index);
@@ -434,11 +438,13 @@ const updateFamilyPicture = (index, value) => {
   emit('updateRecipe', { ...props.recipe, family_pictures: newPictures });
 };
 
+// Add new empty family picture field
 const addFamilyPicture = () => {
   const newPictures = [...props.recipe.family_pictures, ''];
   emit('updateRecipe', { ...props.recipe, family_pictures: newPictures });
 };
 
+// Remove family picture at specific index
 const removeFamilyPicture = (index) => {
   if (props.recipe.family_pictures.length > 1) {
     const newPictures = props.recipe.family_pictures.filter((_, i) => i !== index);
@@ -581,18 +587,4 @@ defineExpose({
   padding-bottom: 0.5rem;
 }
 
-/* Responsive spacing */
-@media (max-width: 768px) {
-  .form-container {
-    padding: 0.75rem; /* Reduced from 1rem */
-  }
-  
-  .ingredient-row {
-    padding: 0.5rem; /* Reduced from 0.75rem */
-  }
-  
-  .mb-3 {
-    margin-bottom: 0.75rem !important;
-  }
-}
 </style>
