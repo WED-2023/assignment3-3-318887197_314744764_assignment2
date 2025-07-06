@@ -84,7 +84,7 @@
                 @mouseenter="handleUserHover(true)"
                 @mouseleave="handleUserHover(false)"
               >
-                <a href="#" @click.prevent class="dropdown-item disabled">Profile</a>
+                <router-link :to="{ name: 'profile' }" class="dropdown-item">Profile</router-link>
                 <button @click="logout" class="dropdown-item logout-btn">Sign Out</button>
               </div>
             </div>
