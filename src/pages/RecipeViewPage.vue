@@ -38,6 +38,14 @@
         </div>
       </div>
       
+      <!-- Family Recipe Badge -->
+      <div v-if="recipe.family_creator" class="family-badge-section">
+        <div class="family-badge">
+          <i class="fas fa-heart"></i>
+          <span>Family Recipe</span>
+        </div>
+      </div>
+      
       <div class="card-body">
         <div class="row">
           <div class="col-md-6">
@@ -63,6 +71,47 @@
                 <span v-if="recipe.vegetarian" class="badge bg-info me-2">Vegetarian 🥦</span>
                 <span v-if="recipe.glutenFree" class="badge bg-warning text-dark me-2">Gluten Free 🚫🌾</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Family Information Section -->
+        <div v-if="recipe.family_creator" class="family-info-section mt-4">
+          <h3 class="family-section-title">👨‍👩‍👧‍👦 Family Recipe Details</h3>
+          <div class="family-details-card">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="family-creator-info">
+                  <i class="fas fa-user-heart"></i>
+                  <strong>Created by:</strong> {{ recipe.family_creator }}
+                </div>
+              </div>
+              <div class="col-md-6" v-if="recipe.family_occasion">
+                <div class="family-occasion-info">
+                  <i class="fas fa-calendar-heart"></i>
+                  <strong>Special Occasion:</strong> {{ recipe.family_occasion }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Family Pictures Section -->
+        <div v-if="recipe.family_creator && recipe.family_pictures && recipe.family_pictures.length > 0" class="family-pictures-section mt-4">
+          <h3 class="family-section-title">📸 Family Memories</h3>
+          <div class="family-pictures-gallery">
+            <div 
+              v-for="(picture, index) in recipe.family_pictures" 
+              :key="index"
+              class="family-picture-item"
+            >
+              <img 
+                :src="picture"
+                :alt="`Family memory ${index + 1}`"
+                class="family-picture"
+                @error="handleFamilyImageError"
+                @click="openImageModal(picture)"
+              />
             </div>
           </div>
         </div>
@@ -111,6 +160,16 @@
       </div>
       <p class="mt-3">Loading recipe...</p>
     </div>
+
+    <!-- Image Modal -->
+    <div v-if="showImageModal" class="image-modal" @click="closeImageModal">
+      <div class="image-modal-content">
+        <img :src="modalImageSrc" :alt="'Family memory'" class="modal-image" />
+        <button class="close-modal-btn" @click="closeImageModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -148,6 +207,8 @@ export default {
       showFavoriteTooltip: false,      // Controls favorite button tooltip visibility
       showLikeTooltip: false,          // Controls like button tooltip visibility
       showDebug: false,                // Debug mode toggle (unused)
+      showImageModal: false,           // Controls image modal visibility
+      modalImageSrc: '',               // Source for modal image
       store: store                     // Reference to global store
     };
   },
@@ -167,7 +228,7 @@ export default {
       const recipeData = await this.getRecipeInfo(recipeId);
       console.log('RecipeViewPage: Received recipe data:', recipeData);
       
-      // Destructure recipe data with fallback values
+      // Destructure recipe data with fallback values - including family fields
       let {
         analyzedInstructions,
         instructions,
@@ -179,7 +240,10 @@ export default {
         vegan,
         vegetarian,
         glutenFree,
-        servings
+        servings,
+        family_creator,
+        family_occasion,
+        family_pictures
       } = recipeData;
 
       // Process instructions - convert string to structured format
@@ -213,7 +277,7 @@ export default {
         }).filter(ing => ing.original.trim() !== '');
       }
 
-      // Build recipe object with explicit ID and processed data
+      // Build recipe object with explicit ID and processed data - including family fields
       this.recipe = {
         id: String(recipeId),
         instructions,
@@ -227,7 +291,10 @@ export default {
         vegan: vegan || false,
         vegetarian: vegetarian || false,
         glutenFree: glutenFree || false,
-        servings: servings || null
+        servings: servings || null,
+        family_creator: family_creator || null,
+        family_occasion: family_occasion || null,
+        family_pictures: family_pictures || []
       };
 
       // Mark as watched and check favorites/likes if user is logged in
@@ -375,6 +442,26 @@ export default {
           store.cacheSearchData(cachedSearch.results, cachedSearch.params);
         }
       }
+    },
+
+    // Handle family image errors
+    handleFamilyImageError(event) {
+      event.target.style.display = 'none';
+      console.warn('Failed to load family picture:', event.target.src);
+    },
+
+    // Open image in modal
+    openImageModal(imageSrc) {
+      this.modalImageSrc = imageSrc;
+      this.showImageModal = true;
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    },
+
+    // Close image modal
+    closeImageModal() {
+      this.showImageModal = false;
+      this.modalImageSrc = '';
+      document.body.style.overflow = 'auto'; // Restore scrolling
     }
   }
 };
@@ -402,6 +489,159 @@ export default {
 .card-title {
   font-size: 1.8rem;
   font-weight: 600;
+}
+
+/* Family Recipe Badge */
+.family-badge-section {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+.family-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.family-badge i {
+  font-size: 1.4rem;
+  color: #ffe4e1;
+}
+
+/* Family Information Section */
+.family-info-section {
+  background: linear-gradient(135deg, #fff5f5, #fef2f2);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 2px solid #fca5a5;
+  margin-bottom: 1rem;
+}
+
+.family-section-title {
+  color: #dc2626;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #fca5a5;
+  padding-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.family-details-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.family-creator-info,
+.family-occasion-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.family-creator-info i,
+.family-occasion-info i {
+  color: #dc2626;
+  font-size: 1.2rem;
+  width: 20px;
+}
+
+/* Family Pictures Section */
+.family-pictures-section {
+  background: linear-gradient(135deg, #fff5f5, #fef2f2);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 2px solid #fca5a5;
+  margin-bottom: 1rem;
+}
+
+.family-pictures-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.family-picture-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+}
+
+.family-picture-item:hover {
+  transform: translateY(-5px);
+}
+
+.family-picture {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.family-picture:hover {
+  transform: scale(1.05);
+}
+
+/* Image Modal */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: pointer;
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: background-color 0.2s;
+}
+
+.close-modal-btn:hover {
+  background: #b91c1c;
 }
 
 .recipe-info h3 {
@@ -548,27 +788,4 @@ export default {
   height: 3rem;
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 1rem;
-  }
-  
-  .card-title {
-    font-size: 1.4rem;
-  }
-  
-  .action-buttons {
-    align-self: stretch;
-    justify-content: space-between;
-  }
-  
-  .ingredients-list li,
-  .instructions-list li {
-    padding: 0.5rem;
-    font-size: 0.95rem;
-  }
-}
 </style>
