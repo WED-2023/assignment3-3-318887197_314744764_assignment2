@@ -18,14 +18,6 @@ import Vuelidate from '@vuelidate/core';
 
 import store from './store';
 
-// Remove this entire section - you already imported the router above
-/*
-const router = createRouter({
-  history: createWebHistory(),
-  routes  // <- This 'routes' variable doesn't exist here
-});
-*/
-
 // Axios interceptors
 axios.interceptors.request.use((config) => config, (error) => Promise.reject(error));
 axios.interceptors.response.use((response) => response, (error) => Promise.reject(error));

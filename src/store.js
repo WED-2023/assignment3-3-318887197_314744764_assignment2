@@ -4,7 +4,7 @@ import { reactive } from 'vue';
 const store = reactive({
   // User authentication state
   username: null,
-  server_domain: "https://localhost:443",
+  server_domain: "https://lenis.cs.bgu.ac.il:443",
   lastViewedRecipes: [],
   
   // User interaction tracking arrays - store IDs as strings
